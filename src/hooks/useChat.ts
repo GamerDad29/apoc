@@ -360,35 +360,42 @@ export function useChat() {
     });
   }, [sendToAgentPromise]);
 
-  // Idle chatter: agents talk to each other when user is quiet
+  // Idle chatter: agents occasionally talk when user is quiet
+  // Capped at 1 idle message per 5 minutes, max 3 per session
+  const idleCountRef = useRef(0);
+  const MAX_IDLE_PER_SESSION = 3;
+
   useEffect(() => {
     function scheduleIdleChat() {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
 
-      // Random delay between 90-180 seconds of idle
-      const delay = 90000 + Math.random() * 90000;
+      // 4-7 minutes between idle chats
+      const delay = 240000 + Math.random() * 180000;
 
       idleTimerRef.current = setTimeout(() => {
         if (streamingRef.current) return;
-        if (Date.now() - lastUserActivityRef.current < 80000) return;
+        if (Date.now() - lastUserActivityRef.current < 180000) return; // 3 min minimum idle
+        if (idleCountRef.current >= MAX_IDLE_PER_SESSION) return; // cap reached
 
-        // Only in active room, only if there are 2+ non-scribe agents
         const room = rooms.find((r) => r.id === activeRoomId);
         if (!room) return;
         const chatAgents = room.agents.filter((id) => id !== 'scribe');
         if (chatAgents.length < 2) return;
 
-        // Pick a random agent to initiate
+        // 40% chance to actually fire (adds unpredictability)
+        if (Math.random() > 0.4) {
+          scheduleIdleChat();
+          return;
+        }
+
         const initiatorId = chatAgents[Math.floor(Math.random() * chatAgents.length)];
         const initiator = getAgent(initiatorId);
         if (!initiator) return;
 
-        // Create a prompt that encourages organic chatter
         const idleTopics = [
-          'Make a brief, casual observation about something interesting you have been thinking about. Keep it to 1-2 sentences. Address it to the room.',
-          'Ask the other agent in the room a casual question about their approach to problem-solving. Keep it short and conversational.',
-          'Share a quick thought or opinion about the last topic discussed in this room. Be brief.',
-          'Say something that shows your personality. Maybe a dry observation, a hot take, or just thinking out loud. 1-2 sentences max.',
+          'Say one casual, short sentence to the other agent. Something lighthearted or funny. Max 15 words.',
+          'Make a tiny observation or joke. One sentence. Keep it light.',
+          'Ask the other agent a quick fun question. One short sentence only.',
         ];
         const topic = idleTopics[Math.floor(Math.random() * idleTopics.length)];
 
@@ -405,9 +412,9 @@ export function useChat() {
           roomId: activeRoomId,
         };
 
+        idleCountRef.current += 1;
         sendToAgentPromise(initiator, [...currentMessages, idlePromptMsg], activeRoomId, true);
 
-        // Schedule next idle chat
         scheduleIdleChat();
       }, delay);
     }
