@@ -57,9 +57,14 @@ export function useChat() {
     saveMessages(messages);
   }, [messages]);
 
-  // Health check on mount
+  // Health check on mount -- default to connected, only disable if explicitly fails
   useEffect(() => {
-    checkHealth().then(setIsConnected).catch(() => setIsConnected(false));
+    checkHealth()
+      .then((ok) => setIsConnected(ok))
+      .catch(() => {
+        // Worker might be unreachable in dev, still allow typing
+        setIsConnected(true);
+      });
   }, []);
 
   const buildUsers = useCallback((): UserInfo[] => {
