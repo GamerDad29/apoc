@@ -1,5 +1,36 @@
 # APOC Changelog
 
+## 2026-04-07 — v0.3: The Full Crew
+
+### New Agents
+- **Mistral** (mistral-small-3.1-24b-instruct): Creative lateral thinker, dry wit, punchy responses. Blue avatar with spiky hair. Cost: ~$0.03/$0.11 per M tokens.
+- **Scribe** (gemma-4-31b-it:free): Silent note-taker and archivist. Amber hooded figure with spectacles. Cost: FREE.
+
+### Note System + Obsidian Export
+- `/notes [topic]` asks Scribe to compile structured session notes
+- Notes formatted as Obsidian-compatible Markdown (YAML frontmatter, wikilinks, checkboxes)
+- `/export` downloads the last compiled notes as a timestamped .md file
+- Filename format: `apoc-{room}-{date}-{time}.md`
+
+### Agent Targeting
+- `@gemma <msg>` directs message to Gemma specifically
+- `@mistral <msg>` directs message to Mistral
+- `@scribe <msg>` directs message to Scribe
+- Default routing goes to first non-scribe agent in room
+
+### Avatars
+- All four avatars redrawn as Fallout Pip-Boy style pixel art SVGs with CRT scanlines
+- Gemma: pink, warm smile, vault dweller
+- Mistral: blue, spiky hair, sardonic smirk, jacket collar
+- Scribe: amber, hooded with spectacles, holding notebook
+- Christopher: green, confident grin, headphones
+
+### Deployment
+- Live at https://apoc.pages.dev
+- Cloudflare Pages connected, production build with baked env vars
+
+---
+
 ## 2026-04-07 — v0.2: Fallout x Yahoo Lounge
 
 ### UI Overhaul
