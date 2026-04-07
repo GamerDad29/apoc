@@ -62,10 +62,14 @@ export function parseCommand(input: string, _userId: string, userName: string): 
           '/resetbudget ..... Reset session token budgets',
           '/help ............ Show this message',
           '',
-          'TARGETING AGENTS',
+          'TALKING TO AGENTS',
           '@gemma <msg> ..... Direct message to Gemma',
           '@mistral <msg> ... Direct message to Mistral',
           '@scribe <msg> .... Direct message to Scribe',
+          'hey all .......... All agents respond',
+          '',
+          'Unaddressed messages go to chat but',
+          'do NOT auto-trigger any agent.',
         ].join('\n'),
       };
 
@@ -74,13 +78,20 @@ export function parseCommand(input: string, _userId: string, userName: string): 
   }
 }
 
-export function parseTargetAgent(text: string): { agentId: string | null; cleanText: string } {
+export function parseTargetAgent(text: string): { agentId: string | null; cleanText: string; heyAll: boolean } {
+  // Check for "hey all", "hey everyone", "hey everybody"
+  const heyAllPattern = /^hey\s+(all|everyone|everybody|team|crew|gang|y'all)\b/i;
+  if (heyAllPattern.test(text.trim())) {
+    return { agentId: null, cleanText: text, heyAll: true };
+  }
+
+  // Check for @agent targeting
   const match = text.match(/^@(\w+)\s+([\s\S]+)/);
-  if (!match) return { agentId: null, cleanText: text };
+  if (!match) return { agentId: null, cleanText: text, heyAll: false };
 
   const name = match[1].toLowerCase();
   const agent = agents.find((a) => a.id === name || a.name.toLowerCase() === name);
-  if (!agent) return { agentId: null, cleanText: text };
+  if (!agent) return { agentId: null, cleanText: text, heyAll: false };
 
-  return { agentId: agent.id, cleanText: match[2] };
+  return { agentId: agent.id, cleanText: match[2], heyAll: false };
 }

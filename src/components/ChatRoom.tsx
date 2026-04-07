@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { useChat } from '../hooks/useChat';
 import MessageBubble from './MessageBubble';
 import SystemMessage from './SystemMessage';
@@ -8,6 +8,8 @@ import TypingIndicator from './TypingIndicator';
 import RoomSelector from './RoomSelector';
 import RoomHeader from './RoomHeader';
 import SearchBar from './SearchBar';
+import AgentProfileModal from './AgentProfileModal';
+import { agentProfiles } from '../agents/profiles';
 import { isSoundEnabled, toggleSound } from '../services/soundService';
 
 export default function ChatRoom() {
@@ -29,6 +31,12 @@ export default function ChatRoom() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
+  const [profileAgentId, setProfileAgentId] = useState<string | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const stored = localStorage.getItem('apoc_sidebar_width');
+    return stored ? parseInt(stored, 10) : 220;
+  });
+  const isDragging = useRef(false);
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
 
@@ -67,6 +75,42 @@ export default function ChatRoom() {
     setShowSearch(false);
     setSearchQuery('');
   }
+
+  function handleClickAgent(agentId: string) {
+    if (agentProfiles[agentId]) {
+      setProfileAgentId(agentId);
+    }
+  }
+
+  // Sidebar drag resize
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+
+    function onMove(ev: MouseEvent) {
+      if (!isDragging.current) return;
+      const delta = startX - ev.clientX;
+      const newWidth = Math.min(400, Math.max(150, startWidth + delta));
+      setSidebarWidth(newWidth);
+    }
+
+    function onUp() {
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      localStorage.setItem('apoc_sidebar_width', String(sidebarWidth));
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [sidebarWidth]);
 
   return (
     <div className="apoc-window">
@@ -133,6 +177,7 @@ export default function ChatRoom() {
                   key={msg.id}
                   message={msg}
                   searchQuery={searchMatches.has(msg.id) ? searchQuery : undefined}
+                  onClickAgent={handleClickAgent}
                 />
               );
             })}
@@ -144,8 +189,23 @@ export default function ChatRoom() {
 
           <ChatInput onSend={sendMessage} disabled={!isConnected} />
         </div>
-        <UserList users={users} />
+
+        <div className="sidebar-container" style={{ width: sidebarWidth }}>
+          <div
+            className={`sidebar-drag-handle ${isDragging.current ? 'dragging' : ''}`}
+            onMouseDown={handleDragStart}
+          />
+          <UserList users={users} onClickAgent={handleClickAgent} />
+        </div>
       </div>
+
+      {/* Agent Profile Modal */}
+      {profileAgentId && agentProfiles[profileAgentId] && (
+        <AgentProfileModal
+          profile={agentProfiles[profileAgentId]}
+          onClose={() => setProfileAgentId(null)}
+        />
+      )}
     </div>
   );
 }

@@ -2,9 +2,10 @@ import { UserInfo } from '../types';
 
 interface Props {
   users: UserInfo[];
+  onClickAgent: (agentId: string) => void;
 }
 
-export default function UserList({ users }: Props) {
+export default function UserList({ users, onClickAgent }: Props) {
   return (
     <div className="user-list">
       <div className="user-list-header">In This Room</div>
@@ -20,8 +21,11 @@ export default function UserList({ users }: Props) {
           />
           <div className="user-card-info">
             <div
-              className="user-card-name"
+              className={`user-card-name ${user.id !== 'christopher' ? 'clickable' : ''}`}
               style={{ color: user.nameColor }}
+              onClick={() => {
+                if (user.id !== 'christopher') onClickAgent(user.id);
+              }}
             >
               {user.name}
             </div>

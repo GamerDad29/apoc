@@ -3,6 +3,7 @@ import { Message } from '../types';
 interface Props {
   message: Message;
   searchQuery?: string;
+  onClickAgent?: (agentId: string) => void;
 }
 
 function formatTime(timestamp: number): string {
@@ -38,7 +39,9 @@ function renderMarkdown(text: string, searchQuery?: string): (string | JSX.Eleme
   return [<span key="md" dangerouslySetInnerHTML={{ __html: html }} />];
 }
 
-export default function MessageBubble({ message, searchQuery }: Props) {
+export default function MessageBubble({ message, searchQuery, onClickAgent }: Props) {
+  const isAgent = message.type === 'agent';
+
   return (
     <div className={`message ${searchQuery ? 'highlighted' : ''}`}>
       <img
@@ -52,8 +55,11 @@ export default function MessageBubble({ message, searchQuery }: Props) {
       <div className="message-body">
         <div className="message-header">
           <span
-            className="message-sender"
+            className={`message-sender ${isAgent ? 'clickable' : ''}`}
             style={{ color: message.senderColor }}
+            onClick={() => {
+              if (isAgent && onClickAgent) onClickAgent(message.senderId);
+            }}
           >
             {message.senderName}
           </span>

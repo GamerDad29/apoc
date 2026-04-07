@@ -37,34 +37,146 @@ function playTone(freq: number, duration: number, type: OscillatorType = 'square
   }
 }
 
-export function playEnterRoom(): void {
-  // Ascending two-note chime: vault door opening
-  playTone(440, 0.15, 'sine', 0.06);
-  setTimeout(() => playTone(660, 0.2, 'sine', 0.06), 120);
+function playSequence(notes: { freq: number; dur: number; delay: number; type?: OscillatorType; vol?: number }[]): void {
+  for (const note of notes) {
+    setTimeout(() => playTone(note.freq, note.dur, note.type || 'sine', note.vol || 0.06), note.delay);
+  }
 }
 
-export function playMessageReceive(): void {
-  // Short terminal blip
-  playTone(880, 0.06, 'square', 0.04);
+// === ROOM AMBIENT TONES (play on room switch) ===
+
+export function playRoomTone(roomId: string): void {
+  switch (roomId) {
+    case 'main':
+      // Warm open chord: welcoming
+      playSequence([
+        { freq: 440, dur: 0.2, delay: 0 },
+        { freq: 554, dur: 0.2, delay: 80 },
+        { freq: 659, dur: 0.25, delay: 160 },
+      ]);
+      break;
+    case 'project':
+      // Focused two-note: serious, clean
+      playSequence([
+        { freq: 523, dur: 0.15, delay: 0, type: 'triangle' },
+        { freq: 784, dur: 0.2, delay: 100, type: 'triangle' },
+      ]);
+      break;
+    case 'makers':
+      // Playful descending bounce: creative energy
+      playSequence([
+        { freq: 880, dur: 0.1, delay: 0, type: 'square', vol: 0.04 },
+        { freq: 740, dur: 0.1, delay: 80, type: 'square', vol: 0.04 },
+        { freq: 660, dur: 0.1, delay: 160, type: 'square', vol: 0.04 },
+        { freq: 880, dur: 0.15, delay: 260, type: 'square', vol: 0.05 },
+      ]);
+      break;
+    default:
+      playTone(600, 0.1, 'triangle', 0.05);
+  }
+}
+
+// === AGENT-SPECIFIC TONES (play when agent responds) ===
+
+export function playAgentTone(agentId: string): void {
+  switch (agentId) {
+    case 'gemma':
+      // Warm, confident double-ping
+      playSequence([
+        { freq: 660, dur: 0.08, delay: 0, vol: 0.05 },
+        { freq: 880, dur: 0.1, delay: 70, vol: 0.05 },
+      ]);
+      break;
+    case 'mistral':
+      // Quick sharp triplet: edgy, lateral
+      playSequence([
+        { freq: 740, dur: 0.05, delay: 0, type: 'square', vol: 0.04 },
+        { freq: 932, dur: 0.05, delay: 50, type: 'square', vol: 0.04 },
+        { freq: 740, dur: 0.07, delay: 100, type: 'square', vol: 0.04 },
+      ]);
+      break;
+    case 'scribe':
+      // Soft pen-scratch: low, subtle
+      playSequence([
+        { freq: 1200, dur: 0.03, delay: 0, type: 'triangle', vol: 0.02 },
+        { freq: 1400, dur: 0.03, delay: 40, type: 'triangle', vol: 0.02 },
+      ]);
+      break;
+    default:
+      playTone(880, 0.06, 'square', 0.04);
+  }
+}
+
+// === AGENT ENTER/LEAVE SOUNDS ===
+
+export function playAgentEnter(agentId: string): void {
+  // Ascending vault-door chime, colored by agent
+  const baseFreqs: Record<string, number> = {
+    gemma: 440,
+    mistral: 494,
+    scribe: 392,
+  };
+  const base = baseFreqs[agentId] || 440;
+  playSequence([
+    { freq: base, dur: 0.12, delay: 0, vol: 0.05 },
+    { freq: base * 1.25, dur: 0.12, delay: 100, vol: 0.05 },
+    { freq: base * 1.5, dur: 0.18, delay: 200, vol: 0.06 },
+  ]);
+}
+
+export function playAgentLeave(agentId: string): void {
+  // Descending tone: departure
+  const baseFreqs: Record<string, number> = {
+    gemma: 660,
+    mistral: 740,
+    scribe: 588,
+  };
+  const base = baseFreqs[agentId] || 660;
+  playSequence([
+    { freq: base, dur: 0.12, delay: 0, vol: 0.04 },
+    { freq: base * 0.75, dur: 0.15, delay: 100, vol: 0.04 },
+    { freq: base * 0.5, dur: 0.2, delay: 200, vol: 0.03 },
+  ]);
+}
+
+// === GENERAL SOUNDS ===
+
+export function playEnterRoom(): void {
+  playRoomTone('main');
 }
 
 export function playMessageSend(): void {
-  // Lower click
   playTone(520, 0.04, 'square', 0.03);
 }
 
-export function playTyping(): void {
-  // Subtle keypress
-  playTone(1200, 0.02, 'square', 0.02);
+export function playMessageReceive(): void {
+  playTone(880, 0.06, 'square', 0.04);
 }
 
 export function playError(): void {
-  // Descending buzz
-  playTone(220, 0.2, 'sawtooth', 0.05);
+  playSequence([
+    { freq: 220, dur: 0.15, delay: 0, type: 'sawtooth', vol: 0.05 },
+    { freq: 180, dur: 0.2, delay: 120, type: 'sawtooth', vol: 0.04 },
+  ]);
 }
 
-export function playRoomSwitch(): void {
-  // Quick sweep
-  playTone(600, 0.08, 'triangle', 0.05);
-  setTimeout(() => playTone(800, 0.1, 'triangle', 0.05), 60);
+export function playRoomSwitch(roomId: string): void {
+  playRoomTone(roomId);
+}
+
+export function playHeyAll(): void {
+  // Broadcast chime: attention everyone
+  playSequence([
+    { freq: 660, dur: 0.08, delay: 0, type: 'triangle', vol: 0.06 },
+    { freq: 660, dur: 0.08, delay: 100, type: 'triangle', vol: 0.06 },
+    { freq: 880, dur: 0.15, delay: 200, type: 'triangle', vol: 0.07 },
+  ]);
+}
+
+export function playIdleChatter(): void {
+  // Soft murmur: agents talking amongst themselves
+  playSequence([
+    { freq: 500, dur: 0.06, delay: 0, type: 'sine', vol: 0.02 },
+    { freq: 600, dur: 0.06, delay: 80, type: 'sine', vol: 0.02 },
+  ]);
 }

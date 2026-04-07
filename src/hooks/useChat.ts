@@ -7,7 +7,11 @@ import { checkHealth } from '../services/proxyService';
 import { parseCommand, parseTargetAgent } from '../services/commandService';
 import { buildNotesPrompt, downloadAsMarkdown, generateExportFilename } from '../services/noteService';
 import { getAgentMood, getMoodEmoji } from '../services/moodService';
-import { playEnterRoom, playMessageSend, playMessageReceive, playRoomSwitch, playError } from '../services/soundService';
+import {
+  playEnterRoom, playMessageSend, playAgentTone,
+  playRoomSwitch, playError, playHeyAll, playIdleChatter,
+  playAgentEnter,
+} from '../services/soundService';
 
 const USER_ID = 'christopher';
 const USER_NAME = 'Christopher';
@@ -44,6 +48,7 @@ function createEntryMessages(roomId: string): Message[] {
     .map((agentId) => {
       const agent = agents.find((a) => a.id === agentId);
       if (!agent) return null;
+      playAgentEnter(agentId);
       return {
         id: generateId(),
         senderId: 'system',
@@ -73,6 +78,8 @@ export function useChat() {
   const [isConnected, setIsConnected] = useState(true);
   const [lastNotes, setLastNotes] = useState<string>('');
   const streamingRef = useRef(false);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastUserActivityRef = useRef(Date.now());
 
   const messages = messagesByRoom[activeRoomId] || [];
 
@@ -90,19 +97,19 @@ export function useChat() {
 
   const agentMessageCount = messages.filter((m) => m.type === 'agent' || m.type === 'user').length;
 
-  const switchRoom = useCallback((roomId: string) => {
-    if (roomId === activeRoomId) return;
-    setActiveRoomId(roomId);
-    setTypingAgent(null);
-    playRoomSwitch();
-  }, [activeRoomId]);
-
   const setRoomMessages = useCallback((roomId: string, updater: (prev: Message[]) => Message[]) => {
     setMessagesByRoom((prev) => ({
       ...prev,
       [roomId]: updater(prev[roomId] || []),
     }));
   }, []);
+
+  const switchRoom = useCallback((roomId: string) => {
+    if (roomId === activeRoomId) return;
+    setActiveRoomId(roomId);
+    setTypingAgent(null);
+    playRoomSwitch(roomId);
+  }, [activeRoomId]);
 
   const buildUsers = useCallback((): UserInfo[] => {
     const room = rooms.find((r) => r.id === activeRoomId);
@@ -113,7 +120,6 @@ export function useChat() {
         const agent = agents.find((a) => a.id === agentId);
         if (!agent) return null;
 
-        // Scribe doesn't have mood, just status
         if (agent.id === 'scribe') {
           return {
             id: agent.id,
@@ -148,10 +154,12 @@ export function useChat() {
     return [...agentUsers, christopherUser];
   }, [typingAgent, activeRoomId, agentMessageCount]);
 
+  // Send to a single agent and get streaming response
   const sendToAgent = useCallback((
     agent: ReturnType<typeof getAgent>,
     allMessages: Message[],
     roomId: string,
+    isIdleChat?: boolean,
   ) => {
     if (!agent) return;
 
@@ -170,7 +178,11 @@ export function useChat() {
         if (!streamStarted) {
           streamStarted = true;
           setTypingAgent(null);
-          playMessageReceive();
+          if (isIdleChat) {
+            playIdleChatter();
+          } else {
+            playAgentTone(agent.id);
+          }
         }
         setRoomMessages(roomId, (prev) => {
           const existing = prev.find((m) => m.id === agentMsgId);
@@ -199,7 +211,6 @@ export function useChat() {
       () => {
         streamingRef.current = false;
         setTypingAgent(null);
-        // If this was Scribe, save the notes
         if (agent.id === 'scribe') {
           setLastNotes(accumulated);
         }
@@ -231,9 +242,193 @@ export function useChat() {
     );
   }, [setRoomMessages]);
 
+  // "Hey all" -- send to multiple agents sequentially
+  const sendToAll = useCallback((
+    _userMsg: Message,
+    allMessages: Message[],
+    roomId: string,
+  ) => {
+    const room = rooms.find((r) => r.id === roomId);
+    if (!room) return;
+
+    // Get all non-scribe agents in the room
+    const respondingAgents = room.agents
+      .filter((id) => id !== 'scribe')
+      .map((id) => getAgent(id))
+      .filter(Boolean) as NonNullable<ReturnType<typeof getAgent>>[];
+
+    if (respondingAgents.length === 0) return;
+
+    playHeyAll();
+
+    // Chain agent responses sequentially
+    let chain = Promise.resolve();
+    for (const agent of respondingAgents) {
+      chain = chain.then(() => new Promise<void>((resolve) => {
+        // Wait a beat between agents
+        setTimeout(() => {
+          const currentMessages = messagesByRoom[roomId] || allMessages;
+          sendToAgentPromise(agent, currentMessages, roomId).then(resolve);
+        }, 500);
+      }));
+    }
+  }, [messagesByRoom]);
+
+  // Promise-based sendToAgent for chaining
+  const sendToAgentPromise = useCallback((
+    agent: NonNullable<ReturnType<typeof getAgent>>,
+    allMessages: Message[],
+    roomId: string,
+    isIdleChat?: boolean,
+  ): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!agent) { resolve(); return; }
+
+      streamingRef.current = true;
+      setTypingAgent(agent.name);
+
+      const agentMsgId = generateId();
+      let accumulated = '';
+      let streamStarted = false;
+
+      sendMessageToAgent(
+        agent,
+        allMessages,
+        (chunk) => {
+          accumulated += chunk;
+          if (!streamStarted) {
+            streamStarted = true;
+            setTypingAgent(null);
+            if (isIdleChat) {
+              playIdleChatter();
+            } else {
+              playAgentTone(agent.id);
+            }
+          }
+          setRoomMessages(roomId, (prev) => {
+            const existing = prev.find((m) => m.id === agentMsgId);
+            if (existing) {
+              return prev.map((m) =>
+                m.id === agentMsgId ? { ...m, content: accumulated } : m,
+              );
+            }
+            return [
+              ...prev,
+              {
+                id: agentMsgId,
+                senderId: agent.id,
+                senderName: agent.name,
+                senderColor: agent.nameColor,
+                avatarUrl: agent.avatarUrl,
+                content: accumulated,
+                timestamp: Date.now(),
+                type: 'agent' as const,
+                isStreaming: true,
+                roomId,
+              },
+            ];
+          });
+        },
+        () => {
+          streamingRef.current = false;
+          setTypingAgent(null);
+          if (agent.id === 'scribe') setLastNotes(accumulated);
+          setRoomMessages(roomId, (prev) =>
+            prev.map((m) =>
+              m.id === agentMsgId ? { ...m, isStreaming: false } : m,
+            ),
+          );
+          resolve();
+        },
+        (error) => {
+          streamingRef.current = false;
+          setTypingAgent(null);
+          playError();
+          setRoomMessages(roomId, (prev) => [
+            ...prev,
+            {
+              id: generateId(),
+              senderId: 'system',
+              senderName: 'System',
+              senderColor: '#5a6a4a',
+              avatarUrl: '',
+              content: `Error from ${agent.name}: ${error}`,
+              timestamp: Date.now(),
+              type: 'system',
+              roomId,
+            },
+          ]);
+          resolve();
+        },
+      );
+    });
+  }, [setRoomMessages]);
+
+  // Idle chatter: agents talk to each other when user is quiet
+  useEffect(() => {
+    function scheduleIdleChat() {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+
+      // Random delay between 90-180 seconds of idle
+      const delay = 90000 + Math.random() * 90000;
+
+      idleTimerRef.current = setTimeout(() => {
+        if (streamingRef.current) return;
+        if (Date.now() - lastUserActivityRef.current < 80000) return;
+
+        // Only in active room, only if there are 2+ non-scribe agents
+        const room = rooms.find((r) => r.id === activeRoomId);
+        if (!room) return;
+        const chatAgents = room.agents.filter((id) => id !== 'scribe');
+        if (chatAgents.length < 2) return;
+
+        // Pick a random agent to initiate
+        const initiatorId = chatAgents[Math.floor(Math.random() * chatAgents.length)];
+        const initiator = getAgent(initiatorId);
+        if (!initiator) return;
+
+        // Create a prompt that encourages organic chatter
+        const idleTopics = [
+          'Make a brief, casual observation about something interesting you have been thinking about. Keep it to 1-2 sentences. Address it to the room.',
+          'Ask the other agent in the room a casual question about their approach to problem-solving. Keep it short and conversational.',
+          'Share a quick thought or opinion about the last topic discussed in this room. Be brief.',
+          'Say something that shows your personality. Maybe a dry observation, a hot take, or just thinking out loud. 1-2 sentences max.',
+        ];
+        const topic = idleTopics[Math.floor(Math.random() * idleTopics.length)];
+
+        const currentMessages = messagesByRoom[activeRoomId] || [];
+        const idlePromptMsg: Message = {
+          id: generateId(),
+          senderId: 'system',
+          senderName: 'System',
+          senderColor: '#5a6a4a',
+          avatarUrl: '',
+          content: topic,
+          timestamp: Date.now(),
+          type: 'system',
+          roomId: activeRoomId,
+        };
+
+        sendToAgentPromise(initiator, [...currentMessages, idlePromptMsg], activeRoomId, true);
+
+        // Schedule next idle chat
+        scheduleIdleChat();
+      }, delay);
+    }
+
+    scheduleIdleChat();
+
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [activeRoomId, messagesByRoom, sendToAgentPromise]);
+
   const sendMessage = useCallback(
     (text: string) => {
       if (streamingRef.current) return;
+
+      // Reset idle timer on user activity
+      lastUserActivityRef.current = Date.now();
 
       // Check for slash commands
       const cmdResult = parseCommand(text, USER_ID, USER_NAME);
@@ -277,7 +472,6 @@ export function useChat() {
         }
 
         if (cmdResult.type === 'notes') {
-          // Ask Scribe to compile notes
           const scribeAgent = getAgent('scribe');
           if (!scribeAgent) return;
           const room = rooms.find((r) => r.id === activeRoomId);
@@ -370,8 +564,8 @@ export function useChat() {
         return;
       }
 
-      // Regular message -- check for @agent targeting
-      const { agentId: targetId, cleanText } = parseTargetAgent(text);
+      // Regular message
+      const { agentId: targetId, cleanText, heyAll } = parseTargetAgent(text);
 
       const userMsg: Message = {
         id: generateId(),
@@ -388,29 +582,25 @@ export function useChat() {
       setRoomMessages(activeRoomId, (prev) => [...prev, userMsg]);
       playMessageSend();
 
-      // Determine which agent to route to
-      const room = rooms.find((r) => r.id === activeRoomId);
-      let agent;
-
-      if (targetId) {
-        // Explicit @mention
-        agent = getAgent(targetId);
-      } else {
-        // Default: first non-scribe agent in the room
-        const defaultAgentId = room?.agents.find((id) => id !== 'scribe');
-        agent = defaultAgentId ? getAgent(defaultAgentId) : undefined;
+      // "Hey all" -- all agents respond
+      if (heyAll) {
+        sendToAll(userMsg, [...messages, userMsg], activeRoomId);
+        return;
       }
 
-      if (!agent) return;
+      // Targeted @agent message
+      if (targetId) {
+        const agent = getAgent(targetId);
+        if (!agent) return;
+        const messagesForAgent = [...messages, { ...userMsg, content: cleanText }];
+        sendToAgent(agent, messagesForAgent, activeRoomId);
+        return;
+      }
 
-      // Build message list with clean text if targeted
-      const messagesForAgent = targetId
-        ? [...messages, { ...userMsg, content: cleanText }]
-        : [...messages, userMsg];
-
-      sendToAgent(agent, messagesForAgent, activeRoomId);
+      // BUG FIX: Unaddressed messages just go to chat. No agent responds.
+      // User must @mention an agent or say "hey all" to get a response.
     },
-    [messages, activeRoomId, setRoomMessages, sendToAgent, lastNotes],
+    [messages, activeRoomId, setRoomMessages, sendToAgent, sendToAll, lastNotes],
   );
 
   return {
