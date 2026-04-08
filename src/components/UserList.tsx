@@ -16,7 +16,7 @@ export default function UserList({ users, onClickAgent, getExpression }: Props) 
         <div key={user.id} className="user-card">
           <AnimatedAvatar
             agentId={user.id}
-            size={40}
+            size={56}
             expression={getExpression(user.id)}
             className="user-card-avatar"
           />

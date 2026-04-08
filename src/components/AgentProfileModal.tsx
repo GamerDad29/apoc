@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AgentProfile } from '../agents/profiles';
 import AnimatedAvatar from './AnimatedAvatar';
 
@@ -7,6 +8,23 @@ interface Props {
 }
 
 export default function AgentProfileModal({ profile, onClose }: Props) {
+  const avatarFrameRef = useRef<HTMLDivElement>(null);
+  const [mouseTarget, setMouseTarget] = useState<{ x: number; y: number } | undefined>();
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!avatarFrameRef.current) return;
+    const rect = avatarFrameRef.current.getBoundingClientRect();
+    // Convert mouse position to SVG coordinate space (112px avatar)
+    const relX = ((e.clientX - rect.left) / rect.width) * 112;
+    const relY = ((e.clientY - rect.top) / rect.height) * 112;
+    setMouseTarget({ x: relX, y: relY });
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('mousemove', handleMouseMove);
+    return () => document.removeEventListener('mousemove', handleMouseMove);
+  }, [handleMouseMove]);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-terminal" onClick={(e) => e.stopPropagation()}>
@@ -19,11 +37,12 @@ export default function AgentProfileModal({ profile, onClose }: Props) {
         <div className="modal-body">
           {/* Left: avatar + basic info */}
           <div className="modal-left">
-            <div className="modal-avatar-frame">
+            <div className="modal-avatar-frame" ref={avatarFrameRef}>
               <AnimatedAvatar
                 agentId={profile.id}
                 size={112}
                 className="modal-avatar"
+                mouseTarget={mouseTarget}
               />
               <div className="modal-avatar-scanline" />
             </div>

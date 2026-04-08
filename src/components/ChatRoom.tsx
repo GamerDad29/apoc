@@ -205,7 +205,7 @@ export default function ChatRoom() {
                   message={msg}
                   searchQuery={searchMatches.has(msg.id) ? searchQuery : undefined}
                   onClickAgent={handleClickAgent}
-                  expression={msg.isStreaming ? getExpression(msg.senderId) : undefined}
+                  expression={msg.type === 'agent' ? getExpression(msg.senderId) : undefined}
                 />
               );
             })}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Message, UserInfo } from '../types';
 import { agents, getAgent } from '../agents';
 import { rooms } from '../services/rooms';
@@ -11,7 +11,7 @@ import { getAgentMood, getMoodEmoji } from '../services/moodService';
 import {
   playEnterRoom, playMessageSend, playAgentTone,
   playRoomSwitch, playError, playHeyAll, playIdleChatter,
-  playAgentEnter,
+  playAgentEnter, playMentionAlert,
 } from '../services/soundService';
 import { pickEmote } from '../services/emoteService';
 
@@ -82,7 +82,9 @@ export function useChat() {
   const streamingRef = useRef(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastUserActivityRef = useRef(Date.now());
+  const messagesByRoomRef = useRef(messagesByRoom);
 
+  messagesByRoomRef.current = messagesByRoom;
   const messages = messagesByRoom[activeRoomId] || [];
 
   useEffect(() => {
@@ -162,6 +164,7 @@ export function useChat() {
     allMessages: Message[],
     roomId: string,
     isIdleChat?: boolean,
+    idleInstruction?: string,
   ) => {
     if (!agent) return;
 
@@ -215,6 +218,51 @@ export function useChat() {
         setTypingAgent(null);
         if (agent.id === 'scribe') {
           setLastNotes(accumulated);
+          // Auto-push to Obsidian if the triggering message mentioned it
+          const recentUserMsgs = (messagesByRoomRef.current[roomId] || []).filter(m => m.type === 'user').slice(-3);
+          const userAskedForVault = recentUserMsgs.some(m =>
+            /push to obsidian|save to (obsidian|vault)|vault save|push to vault/i.test(m.content)
+          );
+          if (userAskedForVault && accumulated.length > 50) {
+            const room = rooms.find((r) => r.id === roomId);
+            const date = new Date().toISOString().slice(0, 10);
+            const slug = (room?.name || 'chat').toLowerCase().replace(/\s+/g, '-');
+            const vaultPath = `APOC/apoc-${slug}-${date}.md`;
+            isVaultAvailable().then(available => {
+              if (available) {
+                vaultWrite(vaultPath, accumulated).then(() => {
+                  setRoomMessages(roomId, (prev) => [...prev, {
+                    id: generateId(),
+                    senderId: 'system',
+                    senderName: 'System',
+                    senderColor: '#5a6878',
+                    avatarUrl: '',
+                    content: `Auto-saved to vault: ${vaultPath}`,
+                    timestamp: Date.now(),
+                    type: 'system' as const,
+                    roomId,
+                  }]);
+                }).catch(() => {
+                  setRoomMessages(roomId, (prev) => [...prev, {
+                    id: generateId(),
+                    senderId: 'system',
+                    senderName: 'System',
+                    senderColor: '#5a6878',
+                    avatarUrl: '',
+                    content: 'Auto-save to vault failed. Try /vault save manually.',
+                    timestamp: Date.now(),
+                    type: 'system' as const,
+                    roomId,
+                  }]);
+                });
+              }
+            });
+          }
+        }
+        // Check if agent @mentioned Christopher or asked for a decision
+        const lower = accumulated.toLowerCase();
+        if (/\bchristopher\b|\byour call\b|\bwhat do you think\b|\byour thoughts\b|\byour decision\b|\bwhat would you\b/.test(lower)) {
+          playMentionAlert();
         }
         setRoomMessages(roomId, (prev) =>
           prev.map((m) =>
@@ -232,7 +280,7 @@ export function useChat() {
             id: generateId(),
             senderId: 'system',
             senderName: 'System',
-            senderColor: '#5a6a4a',
+            senderColor: '#5a6878',
             avatarUrl: '',
             content: `Error: ${error}`,
             timestamp: Date.now(),
@@ -241,6 +289,7 @@ export function useChat() {
           },
         ]);
       },
+      idleInstruction,
     );
   }, [setRoomMessages]);
 
@@ -250,6 +299,7 @@ export function useChat() {
     allMessages: Message[],
     roomId: string,
     isIdleChat?: boolean,
+    idleInstruction?: string,
   ): Promise<void> => {
     return new Promise((resolve) => {
       if (!agent) { resolve(); return; }
@@ -330,6 +380,7 @@ export function useChat() {
           ]);
           resolve();
         },
+        idleInstruction,
       );
     });
   }, [setRoomMessages]);
@@ -365,6 +416,8 @@ export function useChat() {
   // Capped at 1 idle message per 5 minutes, max 3 per session
   const idleCountRef = useRef(0);
   const emoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mutedRef = useRef(false);
+  const iterationRef = useRef<{ active: boolean; timer: ReturnType<typeof setTimeout> | null }>({ active: false, timer: null });
   const MAX_IDLE_PER_SESSION = 3;
 
   useEffect(() => {
@@ -376,6 +429,7 @@ export function useChat() {
 
       idleTimerRef.current = setTimeout(() => {
         if (streamingRef.current) return;
+        if (mutedRef.current) { scheduleIdleChat(); return; }
         if (Date.now() - lastUserActivityRef.current < 180000) return; // 3 min minimum idle
         if (idleCountRef.current >= MAX_IDLE_PER_SESSION) return; // cap reached
 
@@ -395,27 +449,16 @@ export function useChat() {
         if (!initiator) return;
 
         const idleTopics = [
-          'Say one casual, short sentence to the other agent. Something lighthearted or funny. Max 15 words.',
-          'Make a tiny observation or joke. One sentence. Keep it light.',
-          'Ask the other agent a quick fun question. One short sentence only.',
+          'Say one casual, short sentence to the other agent in the room. Something lighthearted or funny. Max 15 words. Do NOT quote or repeat this instruction. Just say the sentence directly.',
+          'Make a tiny observation or joke to the room. One sentence. Keep it light. Do NOT preface it or explain what you are doing.',
+          'Ask the other agent a quick fun question. One short sentence only. Just say it naturally.',
         ];
         const topic = idleTopics[Math.floor(Math.random() * idleTopics.length)];
 
         const currentMessages = messagesByRoom[activeRoomId] || [];
-        const idlePromptMsg: Message = {
-          id: generateId(),
-          senderId: 'system',
-          senderName: 'System',
-          senderColor: '#5a6a4a',
-          avatarUrl: '',
-          content: topic,
-          timestamp: Date.now(),
-          type: 'system',
-          roomId: activeRoomId,
-        };
 
         idleCountRef.current += 1;
-        sendToAgentPromise(initiator, [...currentMessages, idlePromptMsg], activeRoomId, true);
+        sendToAgentPromise(initiator, currentMessages, activeRoomId, true, topic);
 
         scheduleIdleChat();
       }, delay);
@@ -438,6 +481,7 @@ export function useChat() {
 
       emoteTimerRef.current = setTimeout(() => {
         if (streamingRef.current) return;
+        if (mutedRef.current) { scheduleEmote(); return; }
 
         const room = rooms.find((r) => r.id === activeRoomId);
         if (!room) return;
@@ -563,9 +607,121 @@ export function useChat() {
     }
   }, [addSystemMessage, lastNotes, activeRoomId]);
 
+  // Iteration mode: agents discuss a topic in round-robin for a set time
+  const startIteration = useCallback((topic: string, durationMs: number) => {
+    const room = rooms.find((r) => r.id === activeRoomId);
+    if (!room) return;
+
+    const chatAgents = room.agents
+      .filter((id) => id !== 'scribe')
+      .map((id) => getAgent(id))
+      .filter(Boolean) as NonNullable<ReturnType<typeof getAgent>>[];
+
+    if (chatAgents.length < 2) return;
+
+    iterationRef.current.active = true;
+    const startTime = Date.now();
+    let agentIndex = 0;
+
+    // End timer
+    iterationRef.current.timer = setTimeout(() => {
+      iterationRef.current.active = false;
+      setRoomMessages(activeRoomId, (prev) => [
+        ...prev,
+        {
+          id: generateId(),
+          senderId: 'system',
+          senderName: 'System',
+          senderColor: '#5a6878',
+          avatarUrl: '',
+          content: `Iteration complete: "${topic}". Asking Scribe to summarize...`,
+          timestamp: Date.now(),
+          type: 'system',
+          roomId: activeRoomId,
+        },
+      ]);
+      // Trigger Scribe to summarize
+      const scribeAgent = getAgent('scribe');
+      if (scribeAgent) {
+        const latestMsgs = messagesByRoomRef.current[activeRoomId] || [];
+        sendToAgent(scribeAgent, latestMsgs, activeRoomId);
+      }
+    }, durationMs);
+
+    // Round-robin loop
+    async function nextTurn() {
+      if (!iterationRef.current.active) return;
+      if (Date.now() - startTime >= durationMs) return;
+
+      const agent = chatAgents[agentIndex % chatAgents.length];
+      agentIndex++;
+
+      const latestMsgs = messagesByRoomRef.current[activeRoomId] || [];
+      const remaining = Math.ceil((durationMs - (Date.now() - startTime)) / 60000);
+      const prevSpeakers = latestMsgs.slice(-6).filter(m => m.type === 'agent').map(m => m.senderName);
+      const lastSpeaker = prevSpeakers[prevSpeakers.length - 1] || 'nobody';
+      const instruction = `GROUP DISCUSSION: "${topic}" (${remaining}min left). ${lastSpeaker} just spoke. RULES: You MUST reference or build on something a specific agent said. Do NOT repeat your previous points. Say something NEW. If you already talked about this, take a different angle. 2-3 sentences max.`;
+      await sendToAgentPromise(agent, latestMsgs, activeRoomId, false, instruction);
+
+      // Wait 2-3 seconds then next agent
+      if (iterationRef.current.active) {
+        setTimeout(nextTurn, 2000 + Math.random() * 1000);
+      }
+    }
+
+    nextTurn();
+  }, [activeRoomId, sendToAgentPromise, sendToAgent, setRoomMessages]);
+
+  // Freeform mode: agents freely discuss until /stop
+  const startFreeform = useCallback(() => {
+    const room = rooms.find((r) => r.id === activeRoomId);
+    if (!room) return;
+
+    const chatAgents = room.agents
+      .filter((id) => id !== 'scribe')
+      .map((id) => getAgent(id))
+      .filter(Boolean) as NonNullable<ReturnType<typeof getAgent>>[];
+
+    if (chatAgents.length < 2) return;
+
+    iterationRef.current.active = true;
+    let turnCount = 0;
+
+    const freeformInstructions = [
+      'Introduce yourself briefly. What are you good at? What excites you? 2 sentences max.',
+      'Respond directly to what the last speaker said. Agree, disagree, or build on it. Name them. 2 sentences.',
+      'Ask another specific agent in the room a question about their skills or perspective. 1-2 sentences.',
+      'What is the most interesting thing said so far? Why? Reference the speaker by name. 2 sentences.',
+      'Challenge something someone said (respectfully). Offer a counter-perspective. 2 sentences.',
+      'Find a connection between two different things agents have said. Synthesize them. 2 sentences.',
+      'What has NOT been said yet that should be? Fill the gap. 1-2 sentences.',
+      'Compliment another agent on a specific point they made. Then add a twist. 2 sentences.',
+    ];
+
+    async function nextTurn() {
+      if (!iterationRef.current.active) return;
+
+      const agent = chatAgents[turnCount % chatAgents.length];
+      turnCount++;
+
+      const instruction = freeformInstructions[Math.min(turnCount - 1, freeformInstructions.length - 1)];
+      const latestMsgs = messagesByRoomRef.current[activeRoomId] || [];
+      await sendToAgentPromise(agent, latestMsgs, activeRoomId, false, instruction);
+
+      if (iterationRef.current.active) {
+        setTimeout(nextTurn, 2500 + Math.random() * 1500);
+      }
+    }
+
+    nextTurn();
+  }, [activeRoomId, sendToAgentPromise]);
+
   const sendMessage = useCallback(
     (text: string) => {
-      if (streamingRef.current) return;
+      // Allow /stop and /mute even during streaming
+      const isStopCmd = text.trim().toLowerCase() === '/stop';
+      const isMuteCmd = text.trim().toLowerCase() === '/mute';
+      if (streamingRef.current && !isStopCmd && !isMuteCmd) return;
 
       // Reset idle timer on user activity
       lastUserActivityRef.current = Date.now();
@@ -688,6 +844,79 @@ export function useChat() {
           return;
         }
 
+        if (cmdResult.type === 'mute') {
+          mutedRef.current = true;
+          addSystemMessage(cmdResult.content);
+          return;
+        }
+
+        if (cmdResult.type === 'unmute') {
+          mutedRef.current = false;
+          addSystemMessage(cmdResult.content);
+          return;
+        }
+
+        if (cmdResult.type === 'stop') {
+          // Cancel active iteration
+          if (iterationRef.current.active) {
+            iterationRef.current.active = false;
+            if (iterationRef.current.timer) clearTimeout(iterationRef.current.timer);
+          }
+          streamingRef.current = false;
+          setTypingAgent(null);
+          addSystemMessage(cmdResult.content);
+          return;
+        }
+
+        if (cmdResult.type === 'iterate') {
+          addSystemMessage(cmdResult.content);
+          startIteration(cmdResult.iterateTopic!, cmdResult.iterateTime!);
+          return;
+        }
+
+        if (cmdResult.type === 'freeform') {
+          addSystemMessage(cmdResult.content);
+          startFreeform();
+          return;
+        }
+
+        if (cmdResult.type === 'save') {
+          addSystemMessage(cmdResult.content);
+          // Trigger Scribe to compile, then auto-push to vault
+          const scribeAgent = getAgent('scribe');
+          if (!scribeAgent) return;
+          const room = rooms.find((r) => r.id === activeRoomId);
+          const notesPrompt = buildNotesPrompt(messages, room?.name || 'chat');
+          const notesMsg: Message = {
+            id: generateId(),
+            senderId: USER_ID,
+            senderName: USER_NAME,
+            senderColor: USER_COLOR,
+            avatarUrl: USER_AVATAR,
+            content: notesPrompt + '\n\nAfter compiling, these notes will be automatically saved to the Obsidian vault.',
+            timestamp: Date.now(),
+            type: 'user',
+            roomId: activeRoomId,
+          };
+          // Use a flag so the onDone callback knows to auto-push
+          sendToAgent(scribeAgent, [...messages, notesMsg], activeRoomId);
+          // The auto-push is handled by the Scribe detection in sendToAgent's onDone
+          // since the user message contains "save to vault"
+          // We inject a fake user message to trigger the auto-detection
+          setRoomMessages(activeRoomId, (prev) => [...prev, {
+            id: generateId(),
+            senderId: USER_ID,
+            senderName: USER_NAME,
+            senderColor: USER_COLOR,
+            avatarUrl: USER_AVATAR,
+            content: 'push to obsidian',
+            timestamp: Date.now(),
+            type: 'user',
+            roomId: activeRoomId,
+          }]);
+          return;
+        }
+
         if (cmdResult.type === 'system') {
           addSystemMessage(cmdResult.content);
           return;
@@ -732,12 +961,14 @@ export function useChat() {
       // BUG FIX: Unaddressed messages just go to chat. No agent responds.
       // User must @mention an agent or say "hey all" to get a response.
     },
-    [messages, activeRoomId, setRoomMessages, sendToAgent, sendToAll, lastNotes],
+    [messages, activeRoomId, setRoomMessages, sendToAgent, sendToAll, lastNotes, startIteration, startFreeform, addSystemMessage],
   );
+
+  const users = useMemo(() => buildUsers(), [buildUsers]);
 
   return {
     messages,
-    users: buildUsers(),
+    users,
     typingAgent,
     isConnected,
     activeRoomId,

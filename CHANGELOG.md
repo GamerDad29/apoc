@@ -1,5 +1,40 @@
 # APOC Changelog
 
+## 2026-04-08 — v0.6: The Full Crew
+
+### Bug Fixes
+- **429 Rate Limit Handling**: Worker proxy now retries up to 3x with exponential backoff (1s, 2s, 4s) when OpenRouter returns 429. Client shows a clean, friendly error message instead of raw JSON.
+- **Idle Chatter Prompt Leak**: Fixed root cause where idle chat instructions (type: 'system') were being filtered by `buildChatHistory`, meaning the model never received the instruction and would sometimes echo its own system prompt. Idle instructions are now injected directly into the API call as a `[Room atmosphere]` user message. Added response sanitizer to strip instruction-echoing prefixes.
+
+### CI Auto-Deploy
+- GitHub Actions workflow (`.github/workflows/deploy.yml`) that builds and deploys to Cloudflare Pages on every push to `main`
+- Requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets in the GitHub repo
+
+### 4 New Agents (All FREE Models)
+- **Cipher** (DeepSeek R1): Hacker/coder. Terse, precise, security-minded. Views everything as a system to reverse-engineer. Terminal green (#00ff41). Visor avatar with short cropped hair.
+- **Oracle** (Llama 3.3 70B): Researcher/analyst. Thorough deep-diver who returns with context nobody asked for but everyone needed. Soft violet (#b388ff). Circlet/headpiece avatar.
+- **Jinx** (Step 3.5 Flash): Chaos agent. "But what if we did the opposite?" Loves breaking things experimentally. Gets excited by failure. Hot orange (#ff6347). Wild asymmetric spiky hair avatar.
+- **Sage** (Nemotron 3 Super): Philosopher/anchor. Quiet wisdom. Asks "why" when everyone asks "how." Drops metaphors that stop the room. Warm teal (#4dd0e1). Hooded sage with beard avatar.
+
+### Room Specialization
+- **Main Room**: Full crew (all 7 agents)
+- **Project Room**: Gemma + Cipher + Oracle + Scribe (focused work)
+- **Makers Space**: Mistral + Jinx + Sage + Scribe (creative/experimental)
+
+### Per-Agent Details
+- 20 unique emotes per new agent (80 total new emotes)
+- Unique synthesized sound tones for each new agent
+- Idle animation patterns tuned to personality (Cipher: focused, Jinx: fidgety, Sage: calm)
+- Full Fallout-style profile cards with strengths, weaknesses, backstory
+- Animated SVG avatars with agent-specific features (visor, circlet, wild hair, hood+beard)
+
+### Agent Awareness Updates
+- All existing agents (Gemma, Mistral, Scribe) now know about the full crew
+- Inter-agent relationship dynamics defined (Gemma/Cipher build pair, Mistral/Jinx chaos twins, Oracle/Sage meaning-makers)
+- Help command updated with full agent roster
+
+---
+
 ## 2026-04-07 — v0.5: Living Room
 
 ### Animated SVG Avatars

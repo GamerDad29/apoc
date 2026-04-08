@@ -20,6 +20,10 @@ export async function sendChatRequest(
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        onError('Rate limited. Free models have usage caps. Try again in a moment.');
+        return;
+      }
       const errorText = await response.text();
       onError(`API error ${response.status}: ${errorText}`);
       return;

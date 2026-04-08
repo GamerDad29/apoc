@@ -46,6 +46,12 @@ export default {
         JSON.stringify({
           models: [
             { id: 'google/gemma-4-31b-it', name: 'Gemma 4 31B', status: 'active' },
+            { id: 'z-ai/glm-4.7-flash', name: 'GLM 4.7 Flash (Mistral)', status: 'active' },
+            { id: 'nvidia/nemotron-3-nano-30b-a3b:free', name: 'Nemotron 3 Nano (Scribe)', status: 'active' },
+            { id: 'qwen/qwen3-coder-next', name: 'Qwen3 Coder Next (Cipher)', status: 'active' },
+            { id: 'google/gemma-4-26b-a4b-it', name: 'Gemma 4 26B (Oracle)', status: 'active' },
+            { id: 'stepfun/step-3.5-flash', name: 'Step 3.5 Flash (Jinx)', status: 'active' },
+            { id: 'google/gemma-4-26b-a4b-it', name: 'Gemma 4 26B (Sage)', status: 'active' },
           ],
         }),
         { headers: { ...cors, 'Content-Type': 'application/json' } },
@@ -73,24 +79,45 @@ export default {
         });
       }
 
-      // Forward to OpenRouter
-      const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
-          'HTTP-Referer': 'https://apoc.pages.dev',
-          'X-Title': 'APOC Chat Room',
-        },
-        body: JSON.stringify(body),
-      });
+      // Forward to OpenRouter with retry on 429
+      const MAX_RETRIES = 3;
+      let openRouterResponse: Response | null = null;
 
-      if (!openRouterResponse.ok) {
-        const errorText = await openRouterResponse.text();
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
+            'HTTP-Referer': 'https://apoc.pages.dev',
+            'X-Title': 'APOC Chat Room',
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (openRouterResponse.status !== 429 || attempt === MAX_RETRIES) break;
+
+        // Exponential backoff: 1s, 2s, 4s
+        const backoffMs = 1000 * Math.pow(2, attempt);
+        await new Promise((r) => setTimeout(r, backoffMs));
+      }
+
+      if (!openRouterResponse || !openRouterResponse.ok) {
+        const status = openRouterResponse?.status || 500;
+        const errorText = openRouterResponse ? await openRouterResponse.text() : 'No response';
+
+        // Friendly message for rate limits
+        if (status === 429) {
+          return new Response(
+            JSON.stringify({ error: 'Rate limited by model provider. Free models have usage caps. Try again in a minute, or switch to a paid model.' }),
+            { status: 429, headers: { ...cors, 'Content-Type': 'application/json' } },
+          );
+        }
+
         return new Response(
-          JSON.stringify({ error: `OpenRouter error: ${openRouterResponse.status}`, details: errorText }),
+          JSON.stringify({ error: `OpenRouter error: ${status}`, details: errorText }),
           {
-            status: openRouterResponse.status,
+            status,
             headers: { ...cors, 'Content-Type': 'application/json' },
           },
         );

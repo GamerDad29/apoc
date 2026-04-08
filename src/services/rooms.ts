@@ -4,23 +4,23 @@ export const rooms: Room[] = [
   {
     id: 'main',
     name: 'Main Room',
-    description: 'General comms. All agents active. Say what you need.',
+    description: 'General comms. Full crew. Say what you need.',
     icon: '\u25C8',
-    agents: ['gemma', 'mistral', 'scribe'],
+    agents: ['gemma', 'mistral', 'scribe', 'cipher', 'oracle', 'jinx', 'sage'],
   },
   {
     id: 'project',
     name: 'Project Room',
-    description: 'Focused work. Specs, roadmaps, architecture, code reviews.',
+    description: 'Focused work. Strategy, architecture, code, research.',
     icon: '\u25A3',
-    agents: ['gemma', 'mistral', 'scribe'],
+    agents: ['gemma', 'cipher', 'oracle', 'scribe'],
   },
   {
     id: 'makers',
     name: 'Makers Space',
-    description: 'Creative builds. Brainstorm, prototype, break things, ship.',
+    description: 'Creative builds. Brainstorm, break things, find meaning.',
     icon: '\u2692',
-    agents: ['gemma', 'mistral', 'scribe'],
+    agents: ['mistral', 'jinx', 'sage', 'scribe'],
   },
 ];
 

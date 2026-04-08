@@ -30,3 +30,74 @@
   0% { ry: 1; }
   100% { ry: 2.5; }
 }
+
+/* Excited bounce */
+.avatar-excited {
+  animation: avatar-excited-anim 0.4s ease-in-out;
+}
+
+@keyframes avatar-excited-anim {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.15); }
+  50% { transform: scale(0.95); }
+  75% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* Cape wave (Christopher) */
+.avatar-cape {
+  animation: avatar-cape-wave 3s ease-in-out infinite;
+  transform-origin: center top;
+}
+
+@keyframes avatar-cape-wave {
+  0% { transform: skewX(0deg); }
+  25% { transform: skewX(1.5deg); }
+  50% { transform: skewX(0deg); }
+  75% { transform: skewX(-1.5deg); }
+  100% { transform: skewX(0deg); }
+}
+
+/* Nervous jitter */
+.avatar-nervous {
+  animation: avatar-nervous-anim 0.15s ease-in-out infinite alternate;
+}
+
+@keyframes avatar-nervous-anim {
+  0% { transform: translateX(-0.5px); }
+  100% { transform: translateX(0.5px); }
+}
+
+/* Whisper lean forward */
+.avatar-whisper {
+  animation: avatar-whisper-anim 0.5s ease-in-out;
+}
+
+@keyframes avatar-whisper-anim {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(1px) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Proud chin-up */
+.avatar-proud {
+  animation: avatar-proud-anim 0.8s ease-in-out;
+}
+
+@keyframes avatar-proud-anim {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(-2px); }
+  100% { transform: translateY(-1px); }
+}
+
+/* Sleepy sway */
+.avatar-sleepy {
+  animation: avatar-sleepy-anim 2s ease-in-out infinite;
+}
+
+@keyframes avatar-sleepy-anim {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(1deg); }
+  75% { transform: rotate(-1deg); }
+  100% { transform: rotate(0deg); }
+}

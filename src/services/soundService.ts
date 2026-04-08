@@ -102,6 +102,37 @@ export function playAgentTone(agentId: string): void {
         { freq: 1400, dur: 0.03, delay: 40, type: 'triangle', vol: 0.02 },
       ]);
       break;
+    case 'cipher':
+      // Digital click-burst: sharp, terminal-like
+      playSequence([
+        { freq: 1100, dur: 0.03, delay: 0, type: 'square', vol: 0.03 },
+        { freq: 1300, dur: 0.03, delay: 30, type: 'square', vol: 0.04 },
+        { freq: 900, dur: 0.04, delay: 60, type: 'square', vol: 0.03 },
+      ]);
+      break;
+    case 'oracle':
+      // Low resonant hum: deep, thoughtful
+      playSequence([
+        { freq: 330, dur: 0.15, delay: 0, type: 'sine', vol: 0.05 },
+        { freq: 440, dur: 0.12, delay: 120, type: 'sine', vol: 0.04 },
+      ]);
+      break;
+    case 'jinx':
+      // Chaotic bounce: playful, unpredictable
+      playSequence([
+        { freq: 988, dur: 0.04, delay: 0, type: 'square', vol: 0.04 },
+        { freq: 1175, dur: 0.04, delay: 40, type: 'square', vol: 0.05 },
+        { freq: 784, dur: 0.04, delay: 80, type: 'square', vol: 0.04 },
+        { freq: 1320, dur: 0.06, delay: 120, type: 'square', vol: 0.05 },
+      ]);
+      break;
+    case 'sage':
+      // Warm bell tone: calm, grounding
+      playSequence([
+        { freq: 396, dur: 0.25, delay: 0, type: 'sine', vol: 0.05 },
+        { freq: 528, dur: 0.3, delay: 200, type: 'sine', vol: 0.04 },
+      ]);
+      break;
     default:
       playTone(880, 0.06, 'square', 0.04);
   }
@@ -115,6 +146,10 @@ export function playAgentEnter(agentId: string): void {
     gemma: 440,
     mistral: 494,
     scribe: 392,
+    cipher: 523,
+    oracle: 370,
+    jinx: 587,
+    sage: 349,
   };
   const base = baseFreqs[agentId] || 440;
   playSequence([
@@ -130,6 +165,10 @@ export function playAgentLeave(agentId: string): void {
     gemma: 660,
     mistral: 740,
     scribe: 588,
+    cipher: 784,
+    oracle: 554,
+    jinx: 880,
+    sage: 523,
   };
   const base = baseFreqs[agentId] || 660;
   playSequence([
@@ -178,5 +217,14 @@ export function playIdleChatter(): void {
   playSequence([
     { freq: 500, dur: 0.06, delay: 0, type: 'sine', vol: 0.02 },
     { freq: 600, dur: 0.06, delay: 80, type: 'sine', vol: 0.02 },
+  ]);
+}
+
+export function playMentionAlert(): void {
+  // Vault-Tec attention chime: ascending triangle, clear and distinct
+  playSequence([
+    { freq: 784, dur: 0.12, delay: 0, type: 'triangle', vol: 0.08 },
+    { freq: 988, dur: 0.12, delay: 120, type: 'triangle', vol: 0.08 },
+    { freq: 1175, dur: 0.18, delay: 240, type: 'triangle', vol: 0.09 },
   ]);
 }
