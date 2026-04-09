@@ -20,27 +20,36 @@
 - Iteration agents still sometimes repeat themes across rounds
 - Sidebar gets long with 11 agents + Christopher on smaller screens
 
-### Next Steps
+### Backlog
 
-**The Intelligence Layer** (next session)
-- Herald agent: News intelligence via Brave Search API (worker route, API key)
-- Signal agent: Reddit intelligence via public JSON API (worker route, subreddit config)
-- Both follow same pattern: agent fetches external data through worker, then responds conversationally
+**Session: The Intelligence Layer** (M, ~3 hrs)
+- Herald agent: News via Brave Search API. New worker route `/api/news`, API key needed, agent fetches before responding.
+- Signal agent: Reddit via public JSON API. New worker route `/api/reddit`, subreddits: ClaudeAI, singularity, CoolGithubProjects, LocalLLaMA. No auth needed.
+- Both follow the same pattern: worker proxies external API, agent gets context, then responds conversationally.
 
-**The Creator** (same or next session)
-- Prism agent: Image generation via Cloudflare Workers AI (FLUX.1 Schnell)
-- Requires [ai] binding in wrangler.toml, new /api/image worker route
-- Image rendering in MessageBubble.tsx
+**Session: The Creator** (L, ~3 hrs)
+- Prism agent: Image generation via Cloudflare Workers AI (FLUX.1 Schnell, $0.01/image)
+- Add `[ai]` binding to wrangler.toml
+- New worker route `/api/image`
+- Image rendering in MessageBubble.tsx (detect `![image](data:...)` in agent output)
 
-**The Memory** (future session)
-- Persistent memory via Cloudflare D1 (SQLite on edge)
-- Tables: memories (agent_id, content, topic_tags, importance) + sessions (summary)
-- Agents recall previous sessions, Scribe auto-stores key decisions
-- Biggest single remaining feature
+**Session: The Memory** (XL, full session)
+- Persistent cross-session memory via Cloudflare D1 (SQLite on edge)
+- Tables: `memories` (agent_id, room_id, content, topic_tags, importance) + `sessions` (summary)
+- Worker routes: `/api/memory/store`, `/api/memory/recall`, `/api/session/start`, `/api/session/end`
+- On load: inject previous session summary into agent system prompts
+- Scribe auto-stores key decisions periodically
 
-**Polish**
-- Mobile responsive pass (sidebar collapse for small screens)
+**Prompt Strengthening** (S, ~30 min)
+- Add "Decider mode" to Gemma: `@gemma decide` triggers her to close debate and pick
+- This covers the Architects/Judges/Filters roles the agents suggested without adding new agents
+- Strengthen existing agent coverage: Flux=synthesis, Cipher=friction/validation, Oracle=value, Sage=silence/filter
+
+**Polish** (M, ~2 hrs)
+- Mobile responsive pass (collapsible sidebar for 11 agents)
 - Rebrand from APOC to new name (TBD)
+- Review Sage vs Oracle distinctiveness (same model)
+- Iteration theme repetition improvements
 
 ---
 
