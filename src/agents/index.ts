@@ -6,6 +6,10 @@ import { cipher } from './cipher';
 import { oracle } from './oracle';
 import { jinx } from './jinx';
 import { sage } from './sage';
+import { flux } from './flux';
+import { drift } from './drift';
+import { patch } from './patch';
+import { echo } from './echo';
 
 export const agents: AgentConfig[] = [
   gemma,
@@ -15,6 +19,10 @@ export const agents: AgentConfig[] = [
   oracle,
   jinx,
   sage,
+  flux,
+  drift,
+  patch,
+  echo,
 ];
 
 export function getAgent(id: string): AgentConfig | undefined {

@@ -52,6 +52,8 @@ export default {
             { id: 'google/gemma-4-26b-a4b-it', name: 'Gemma 4 26B (Oracle)', status: 'active' },
             { id: 'stepfun/step-3.5-flash', name: 'Step 3.5 Flash (Jinx)', status: 'active' },
             { id: 'google/gemma-4-26b-a4b-it', name: 'Gemma 4 26B (Sage)', status: 'active' },
+            { id: 'xiaomi/mimo-v2-flash', name: 'MiMo v2 Flash (Flux)', status: 'active' },
+            { id: 'google/gemma-4-26b-a4b-it', name: 'Gemma 4 26B (Patch)', status: 'active' },
           ],
         }),
         { headers: { ...cors, 'Content-Type': 'application/json' } },

@@ -24,6 +24,10 @@ const COLORS: Record<string, AvatarParts> = {
   oracle: { headColor: '#b388ff', headDark: '#7c4dff', bgColor: '#161020', borderColor: '#2a1f40' },
   jinx: { headColor: '#ff6347', headDark: '#cc3322', bgColor: '#1a1014', borderColor: '#351a20' },
   sage: { headColor: '#4dd0e1', headDark: '#2a9aaa', bgColor: '#0d1520', borderColor: '#1a2a38' },
+  flux: { headColor: '#e6a830', headDark: '#b08020', bgColor: '#1a1610', borderColor: '#352a15' },
+  drift: { headColor: '#7eb8da', headDark: '#5090b0', bgColor: '#0d1520', borderColor: '#1a2a3a' },
+  patch: { headColor: '#c0a0d0', headDark: '#9070a0', bgColor: '#181420', borderColor: '#2a2035' },
+  echo: { headColor: '#e08080', headDark: '#b05555', bgColor: '#1a1215', borderColor: '#351a20' },
   christopher: { headColor: '#55ddaa', headDark: '#33aa77', bgColor: '#0d1418', borderColor: '#1a3030' },
 };
 
@@ -260,6 +264,40 @@ export default function AnimatedAvatar({ agentId, size, expression: externalExpr
         <path d={`M${cx - headR - s * 0.05} ${headY + s * 0.02} Q${cx - headR - s * 0.01} ${headY - headR - s * 0.1} ${cx} ${headY - headR - s * 0.06} Q${cx + headR + s * 0.01} ${headY - headR - s * 0.1} ${cx + headR + s * 0.05} ${headY + s * 0.02}`} fill={c.headDark} fillOpacity="0.85" />
         {/* Beard */}
         <path d={`M${cx - s * 0.06} ${mouthY + s * 0.01} Q${cx - s * 0.04} ${mouthY + s * 0.08} ${cx} ${mouthY + s * 0.1} Q${cx + s * 0.04} ${mouthY + s * 0.08} ${cx + s * 0.06} ${mouthY + s * 0.01}`} fill={c.headDark} opacity="0.6" />
+      </g>
+    );
+  } else if (agentId === 'flux') {
+    // Connected nodes motif + swept-back hair
+    agentDetails = (
+      <g>
+        <path d={`M${cx - headR} ${headY - s * 0.02} Q${cx - headR + s * 0.02} ${headY - headR - s * 0.04} ${cx + s * 0.02} ${headY - headR - s * 0.02} Q${cx + headR - s * 0.01} ${headY - headR - s * 0.04} ${cx + headR} ${headY - s * 0.01}`} fill={c.headDark} />
+        {/* Small connection dots on forehead */}
+        <circle cx={cx - s * 0.04} cy={headY - headR + s * 0.04} r={s * 0.008} fill="#e6a830" opacity="0.6" />
+        <circle cx={cx + s * 0.04} cy={headY - headR + s * 0.035} r={s * 0.008} fill="#e6a830" opacity="0.6" />
+        <line x1={cx - s * 0.04} y1={headY - headR + s * 0.04} x2={cx + s * 0.04} y2={headY - headR + s * 0.035} stroke="#e6a830" strokeWidth={s * 0.005} opacity="0.4" />
+      </g>
+    );
+  } else if (agentId === 'drift') {
+    // Windswept hair + horizon line detail
+    agentDetails = (
+      <g>
+        <path d={`M${cx - headR - s * 0.02} ${headY - s * 0.01} Q${cx - headR} ${headY - headR - s * 0.05} ${cx} ${headY - headR - s * 0.03} Q${cx + headR + s * 0.02} ${headY - headR - s * 0.06} ${cx + headR + s * 0.06} ${headY - s * 0.03}`} fill={c.headDark} />
+      </g>
+    );
+  } else if (agentId === 'patch') {
+    // Neat parted hair + small pen behind ear
+    agentDetails = (
+      <g>
+        <path d={`M${cx - headR} ${headY - s * 0.02} Q${cx - headR + s * 0.01} ${headY - headR - s * 0.03} ${cx - s * 0.01} ${headY - headR - s * 0.02} Q${cx + headR - s * 0.01} ${headY - headR - s * 0.03} ${cx + headR} ${headY - s * 0.02}`} fill={c.headDark} />
+        {/* Red pen behind ear */}
+        <line x1={cx + headR - s * 0.01} y1={headY - s * 0.02} x2={cx + headR + s * 0.03} y2={headY - s * 0.06} stroke="#cc4444" strokeWidth={s * 0.01} strokeLinecap="round" />
+      </g>
+    );
+  } else if (agentId === 'echo') {
+    // Soft wavy hair
+    agentDetails = (
+      <g>
+        <path d={`M${cx - headR - s * 0.01} ${headY} Q${cx - headR} ${headY - headR - s * 0.04} ${cx} ${headY - headR - s * 0.02} Q${cx + headR} ${headY - headR - s * 0.04} ${cx + headR + s * 0.01} ${headY}`} fill={c.headDark} />
       </g>
     );
   } else if (agentId === 'christopher') {
