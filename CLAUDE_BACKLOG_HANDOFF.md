@@ -102,7 +102,13 @@ Open: REBRAND-01. Requires dashboard access:
 - `git remote set-url` locally
 
 ### ⏳ Shipment 3 — Usability
-Open: FEAT-01, FEAT-02, FEAT-04, FEAT-05, FEAT-11, VAULT-01
+Open: FEAT-01, FEAT-02, FEAT-04, FEAT-05, FEAT-11, VAULT-01,
+POLISH-01 (rune font fallback — VT323/Share Tech Mono lack Elder
+Futhark glyphs, so runes render via system fallback and look
+ASCII-adjacent at small sizes. Fix: add Noto Sans Runic to the
+Google Fonts import and target `.wyrd-rune, .system-message` with
+a `font-family` override. XS sized. Discovered during the Phase 2
+rebrand smoke test.)
 
 ### ⏳ Shipment 4 — Wyrdroom as a Workflow Tool
 Open: REF-01, FEAT-03, FEAT-06..10, FEAT-12, FEAT-13, REBRAND-05, OPS-02

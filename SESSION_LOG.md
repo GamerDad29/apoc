@@ -24,6 +24,35 @@
   with comments saying "remove after the Cloudflare Pages custom
   domain cutover."
 
+### Smoke test (Playwright, `wyrdroom-rebrand` branch)
+- `wyrdroom@0.1.0 dev` on `localhost:5173`, wrangler on 8787
+- Page title: "Wyrdroom" ✅
+- Titlebar: `ᚹ WYRDROOM` (Wunjo rune + brand name) ✅
+- Tabs: Main Hall / War Room / The Forge / The Loom ✅
+- Main Hall description: "The great hall. Full crew. Speak your mind." ✅
+- Sidebar header: "In This Hall" ✅
+- Entry messages: all 11 runes flanking agent names, DOM-verified
+  as Elder Futhark Unicode (`ᚷ ᛗ ᛊ ᚲ ᛟ ᛃ ᛋ ᛚ ᛞ ᛈ ᛖ`) ✅
+- localStorage: `wyrd_messages_main` present, zero `apoc_*` keys ✅
+- `/vault` help text: "Save last notes to vault (Wyrdroom folder)" ✅
+- SEC-03 XSS fix still inert under new branding: `window.__wyrd_xss=
+  false`, zero live `<script>` tags in message content, payload
+  fully entity-escaped ✅
+- Ambient emotes still fire (Jinx: "reorganizes the snack drawer by
+  chaos potential") — confirms `isStreaming()` still correct ✅
+- Zero console errors beyond pre-existing favicon 404
+- Screenshot saved to `wyrdroom-rebrand-smoke-test.png` (local,
+  gitignored via `.playwright-mcp/` pattern)
+
+### Observation: rune glyphs render via font fallback
+VT323 and Share Tech Mono are Latin-only retro pixel fonts, so the
+Elder Futhark characters fall back to the system font. At 11px
+monospace some runes read as ASCII-adjacent shapes (`ᚷ` → X,
+`ᛗ` → M, `ᚲ` → <, `ᛖ` → M). The DOM is correct; this is purely
+visual. Fix: add Noto Sans Runic to the Google Fonts import plus a
+`font-family` override on `.wyrd-rune, .system-message`. Filed as a
+Shipment 3 polish item, not a rebrand blocker.
+
 ### Next: Phase 3 (needs Christopher's hands)
 1. GitHub: rename repo `GamerDad29/apoc` → `GamerDad29/wyrdroom`
    via browser UI
