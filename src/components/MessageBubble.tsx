@@ -14,22 +14,104 @@ function formatTime(timestamp: number): string {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-function renderMarkdown(text: string, searchQuery?: string): (string | JSX.Element)[] {
-  let html = text;
-  html = html.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+// Safe markdown renderer: builds React elements directly instead of injecting
+// HTML strings. Text passed through React children is auto-escaped, so no
+// dangerouslySetInnerHTML is used anywhere.
+//
+// Supported syntax (in precedence order):
+//   ```...```   fenced code block
+//   `...`       inline code
+//   **...**     strong
+//   *...*       em
+// After markdown tokenization, optional searchQuery highlighting wraps matches
+// in <mark>.
 
-  if (searchQuery && searchQuery.length > 0) {
-    const escaped = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    html = html.replace(
-      new RegExp(`(${escaped})`, 'gi'),
-      '<mark style="background:#c9a84c33;color:#e0f0c0">$1</mark>',
-    );
+type Node = string | JSX.Element;
+
+const TOKEN_PATTERNS: { name: 'codeBlock' | 'code' | 'strong' | 'em'; re: RegExp }[] = [
+  { name: 'codeBlock', re: /```([\s\S]*?)```/ },
+  { name: 'code', re: /`([^`\n]+)`/ },
+  { name: 'strong', re: /\*\*([^*]+)\*\*/ },
+  { name: 'em', re: /(?<!\*)\*([^*\n]+)\*(?!\*)/ },
+];
+
+function tokenizeMarkdown(text: string, keyPrefix = 'md'): Node[] {
+  // Find the earliest match among all patterns, recurse on the remainder.
+  let earliest: { idx: number; len: number; inner: string; name: string } | null = null;
+  for (const { name, re } of TOKEN_PATTERNS) {
+    const m = re.exec(text);
+    if (m && (earliest === null || m.index < earliest.idx)) {
+      earliest = { idx: m.index, len: m[0].length, inner: m[1], name };
+    }
+  }
+  if (!earliest) return [text];
+
+  const before = text.slice(0, earliest.idx);
+  const after = text.slice(earliest.idx + earliest.len);
+  const key = `${keyPrefix}-${earliest.idx}`;
+  let node: JSX.Element;
+  switch (earliest.name) {
+    case 'codeBlock':
+      node = <pre key={key}>{earliest.inner}</pre>;
+      break;
+    case 'code':
+      node = <code key={key}>{earliest.inner}</code>;
+      break;
+    case 'strong':
+      node = <strong key={key}>{earliest.inner}</strong>;
+      break;
+    case 'em':
+      node = <em key={key}>{earliest.inner}</em>;
+      break;
+    default:
+      node = <span key={key}>{earliest.inner}</span>;
   }
 
-  return [<span key="md" dangerouslySetInnerHTML={{ __html: html }} />];
+  const result: Node[] = [];
+  if (before) result.push(before);
+  result.push(node);
+  if (after) result.push(...tokenizeMarkdown(after, `${keyPrefix}>`));
+  return result;
+}
+
+function highlightSearch(nodes: Node[], query: string): Node[] {
+  if (!query) return nodes;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`(${escaped})`, 'gi');
+
+  const out: Node[] = [];
+  let keyCounter = 0;
+  for (const node of nodes) {
+    if (typeof node !== 'string') {
+      out.push(node);
+      continue;
+    }
+    const parts = node.split(re);
+    for (const part of parts) {
+      if (!part) continue;
+      if (re.test(part)) {
+        // reset since /g is stateful
+        re.lastIndex = 0;
+        out.push(
+          <mark
+            key={`hl-${keyCounter++}`}
+            style={{ background: '#c9a84c33', color: '#e0f0c0' }}
+          >
+            {part}
+          </mark>,
+        );
+      } else {
+        re.lastIndex = 0;
+        out.push(part);
+      }
+    }
+  }
+  return out;
+}
+
+export function renderMessageContent(text: string, searchQuery?: string): Node[] {
+  const tokens = tokenizeMarkdown(text);
+  return highlightSearch(tokens, searchQuery || '');
 }
 
 export default function MessageBubble({ message, searchQuery, onClickAgent, expression }: Props) {
@@ -70,7 +152,7 @@ export default function MessageBubble({ message, searchQuery, onClickAgent, expr
           <span className="message-time">{formatTime(message.timestamp)}</span>
         </div>
         <div className="message-content">
-          {renderMarkdown(message.content, searchQuery)}
+          {renderMessageContent(message.content, searchQuery)}
           {message.isStreaming && <span className="streaming-cursor" />}
         </div>
       </div>
