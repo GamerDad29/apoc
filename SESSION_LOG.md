@@ -1,5 +1,40 @@
 # APOC Session Log
 
+## 2026-04-10 — Shipment 1: Trust the Runtime
+
+### Accomplished
+- Codex deep-review consolidated with existing handoff backlog + Wyrdroom
+  rebrand doc into a single t-shirt-sized plan (4 shipments)
+- **Shipment 1 shipped in full** (3 commits on `main`, not yet pushed):
+  - `82dc2a0` test: Vitest harness + service coverage + review docs
+  - `bcb90c8` fix(security): sanitize markdown rendering to prevent XSS
+  - `a5e50e1` fix(chat): real cancellation, concurrent streaming, runtime integrity
+- 8 backlog items closed: SEC-03, BUG-01, BUG-02, BUG-03, BUG-04, BUG-06,
+  BUG-07, TEST-01 extensions
+- Test coverage: 10 → 19 tests, all passing; clean `tsc --noEmit`;
+  clean `vite build` (352 kB / 112 kB gzip)
+
+### Known Issues / Carry-over
+- `VITE_PROXY_SECRET` still shipped in the bundle (SEC-01) — intentional;
+  real fix lands with Shipment 2's Worker redeploy alongside strict
+  origin validation (SEC-02)
+- `useChat` is still a god hook — internal event model (REF-01) is
+  Shipment 4
+- Shipment 1 not yet pushed to `origin/main` (awaiting user go-ahead)
+- Shipment 1 not yet manually smoke-tested in `npm run dev`
+
+### Next Session: Shipment 2 — Wyrdroom + Security Finish
+One Worker redeploy, new name, correct CORS from day one. Order:
+1. SEC-02 strict origin validation (exact host, no `endsWith`)
+2. SEC-01 auth redesign (remove bundled secret)
+3. OPS-01 Worker rate limit + abuse protection
+4. BUG-05 kill `/api/models` hardcoded drift
+5. REF-02 single source of truth for agent metadata
+6. REBRAND-01 infra rename (repo, folder, `wyrdroom-proxy`, `wyrdroom.com`)
+7. REBRAND-02 branding, copy, palette, typography, room→hall
+8. REBRAND-03 agent prompts + runes
+9. REBRAND-04 localStorage + Scribe vault path
+
 ## 2026-04-08 — The War Room
 
 ### Accomplished

@@ -44,7 +44,39 @@ A Vitest harness now exists and passes.
 
 Claude should extend this harness before touching the higher-risk runtime paths.
 
+## Shipment Status
+
+### ✅ Shipment 1 — Trust the Runtime (shipped 2026-04-10)
+
+Commits on `main`: `82dc2a0`, `bcb90c8`, `a5e50e1`. 19/19 tests passing.
+
+Closed:
+- **SEC-03** XSS in MessageBubble — React tokenizer, no `dangerouslySetInnerHTML`
+- **BUG-01** Real `/stop` cancellation — AbortController threaded through
+- **BUG-06** Concurrent streaming state — per-request Map, per-agent typing
+- **BUG-02** `/save` structured intent — no more fake-message injection
+- **BUG-07** Truthful connectivity — failed health check → disconnected
+- **BUG-04** Pure state initializer — audio moved to mount effect
+- **BUG-03** Sidebar resize — ref-based width at mouse-up
+- **TEST-01** Vitest harness + service coverage extended
+
+### ⏳ Shipment 2 — Wyrdroom + Security Finish (next)
+
+Open: SEC-01, SEC-02, OPS-01, BUG-05, REF-02, REBRAND-01..04. See the
+Wyrdroom Epic below and the "Shipments 1–4" plan at the bottom. One
+Worker redeploy, new name, correct CORS from day one.
+
+### ⏳ Shipment 3 — Usability
+Open: FEAT-01, FEAT-02, FEAT-04, FEAT-05, FEAT-11, VAULT-01
+
+### ⏳ Shipment 4 — Wyrdroom as a Workflow Tool
+Open: REF-01, FEAT-03, FEAT-06..10, FEAT-12, FEAT-13, REBRAND-05, OPS-02
+
+---
+
 ## Fix-Now Backlog
+
+> Historical reference. Items marked ✅ DONE above shipped in Shipment 1.
 
 ### P0. Remove fake frontend secret auth
 

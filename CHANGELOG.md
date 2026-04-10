@@ -1,5 +1,55 @@
 # APOC Changelog
 
+## 2026-04-10 — Shipment 1: Trust the Runtime
+
+Post-Codex-review hardening pass. No new features — eight correctness
+and security fixes, plus doubled test coverage.
+
+### Security
+- **XSS killed in message rendering (SEC-03).** `MessageBubble` no longer
+  uses `dangerouslySetInnerHTML`. Rewritten as a recursive React
+  tokenizer so user and model content is auto-escaped by React. Pasted
+  `<script>`, `<img onerror=...>`, and similar payloads now render as
+  inert text. 7 regression tests added.
+
+### Chat runtime integrity
+- **`/stop` actually cancels (BUG-01).** `AbortController` threaded
+  through `sendChatRequest` → `sendMessageToAgent` → `useChat`. Upstream
+  fetches tear down immediately instead of burning tokens in the
+  background. `AbortError` is swallowed, not surfaced.
+- **Concurrent streaming state (BUG-06).** Replaced the single
+  `streamingRef` boolean and single `typingAgent` slot with a
+  per-request `Map<msgId, AbortController>` and a `typingAgents: string[]`.
+  Hey-all, iterate, and freeform can now show multiple agents typing
+  at once, and the composer lock / idle scheduler agree on "is anything
+  streaming" across all active requests.
+- **`/save` no longer pollutes the transcript (BUG-02).** Deleted the
+  hack where `/save` injected a fake `"push to obsidian"` user message
+  to trick Scribe's auto-save branch. Replaced with structured
+  `sendToAgent(..., { autoSaveToVault: true })` intent.
+- **Truthful connectivity (BUG-07).** Failed health check used to fall
+  back to `setIsConnected(true)`, lying to the UI when the worker was
+  down. Now surfaces as disconnected, with a 60-second periodic
+  recheck.
+
+### Polish
+- **Pure state initializer (BUG-04).** `createEntryMessages` no longer
+  plays audio from inside a React state initializer. Entry sounds
+  moved to a mount effect so StrictMode's double-invocation can't
+  double-fire.
+- **Sidebar resize persistence (BUG-03).** Drag handler reads latest
+  width from a ref at mouse-up instead of the stale value captured
+  when the drag started, so localStorage saves what the user actually
+  dragged to.
+
+### Test harness
+- Vitest + jsdom scaffolded with `src/test/setup.ts`.
+- Service-level tests: command parsing, note transcript generation,
+  token budgeting, proxy streaming, worker auth.
+- Cancellation tests for `proxyService.sendChatRequest` covering
+  signal forwarding and already-aborted short-circuit.
+- **10 → 19 tests passing. Clean typecheck. Clean build.**
+
 ## 2026-04-08 — The War Room
 
 ### New Agents
