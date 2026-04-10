@@ -14,14 +14,42 @@
 - Test coverage: 10 → 19 tests, all passing; clean `tsc --noEmit`;
   clean `vite build` (352 kB / 112 kB gzip)
 
+### Smoke test (live, Playwright-driven)
+- Dev server + wrangler up, drove the UI via Playwright
+- **BUG-07** verified: with worker down on first load, Send button
+  correctly disabled. Started wrangler → reload → input unlocked.
+- **BUG-04** verified: exactly 11 entry messages on load (not 22).
+  StrictMode double-invocation not double-firing.
+- **SEC-03** verified end-to-end: sent `<script>window.__xss_fired=true;
+  alert(1)</script> then <img src=x onerror="...">` into chat. Post-send
+  check: `__xss_fired=false`, `__xss_img=false`, zero live
+  `<script>`/`<img>` tags in message content, innerHTML fully
+  entity-escaped. Payload renders as inert visible text.
+- **BUG-02** verified: `/save` triggered real Scribe stream, saw new
+  "Auto-save to vault failed" system notice fire (vault unavailable),
+  **zero** user messages containing "push to obsidian" in transcript
+  or persisted localStorage.
+- **BUG-03** verified (read side): `localStorage.setItem('apoc_sidebar_
+  width', '320')` → reload → sidebar at 320px. Write side covered by
+  code review; synthetic drag events don't propagate through React's
+  event delegation under Playwright (test-env quirk).
+- `/help` and `/me` render cleanly.
+- Ambient emotes still firing after `streamingRef` → `isStreaming()`
+  refactor — confirms concurrent-state helper is correct.
+- Zero console errors (only pre-existing favicon 404).
+
+### Deployed
+- Pushed 4 commits to `origin/main` (`7f8b900..3e266bf`)
+- CI → Cloudflare Pages auto-deploy triggered
+
 ### Known Issues / Carry-over
-- `VITE_PROXY_SECRET` still shipped in the bundle (SEC-01) — intentional;
-  real fix lands with Shipment 2's Worker redeploy alongside strict
-  origin validation (SEC-02)
+- `VITE_PROXY_SECRET` still shipped in the bundle (SEC-01) — being
+  handled in Shipment 2
+- `/stop` and concurrent typing (BUG-01/06) covered by unit tests
+  only; not exercised live (would burn real tokens on a
+  `/iterate`/`hey all` cancel test)
 - `useChat` is still a god hook — internal event model (REF-01) is
   Shipment 4
-- Shipment 1 not yet pushed to `origin/main` (awaiting user go-ahead)
-- Shipment 1 not yet manually smoke-tested in `npm run dev`
 
 ### Next Session: Shipment 2 — Wyrdroom + Security Finish
 One Worker redeploy, new name, correct CORS from day one. Order:

@@ -4,3 +4,7 @@ dist
 .env
 *.local
 .wrangler
+
+# Tooling state (Claude Code, Playwright MCP smoke-test artifacts)
+.claude/
+.playwright-mcp/
