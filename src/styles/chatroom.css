@@ -109,11 +109,16 @@ html, body, #root {
   text-shadow: 0 0 10px rgba(240, 199, 94, 0.4);
 }
 
-/* Elder Futhark rune used as the Wyrdroom brand mark */
+/* Elder Futhark rune used as the Wyrdroom brand mark.
+ * Noto Sans Runic is loaded from Google Fonts with its default
+ * unicode-range restriction (U+16A0–16F8), so the browser's
+ * per-glyph font fallback uses it only for Runic codepoints and
+ * falls through to the retro pixel fonts for everything else. */
 .wyrd-rune {
   opacity: 0.75;
   margin-right: 6px;
   display: inline-block;
+  font-family: 'Noto Sans Runic', 'VT323', 'Share Tech Mono', monospace;
 }
 
 .wyrd-titlebar-controls {
@@ -439,13 +444,18 @@ html, body, #root {
   animation: message-in 0.2s ease-out;
 }
 
-/* SYSTEM MESSAGES */
+/* SYSTEM MESSAGES
+ * Noto Sans Runic sits at the front of the font stack so that the
+ * Elder Futhark runes flanking entry/exit notices render crisply;
+ * the unicode-range on Google's @font-face means Latin characters
+ * fall through to the retro pixel fonts as intended. */
 .system-message {
   text-align: center;
   padding: 6px 0;
   color: var(--text-system);
   font-size: 12px;
   letter-spacing: 1px;
+  font-family: 'Noto Sans Runic', 'Share Tech Mono', 'VT323', monospace;
   animation: message-in 0.2s ease-out;
 }
 
