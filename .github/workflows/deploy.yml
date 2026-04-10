@@ -21,11 +21,17 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          VITE_WORKER_URL: https://apoc-proxy.gamerdad29.workers.dev
-          VITE_PROXY_SECRET: ${{ secrets.VITE_PROXY_SECRET }}
+          # Wyrdroom worker (Shipment 2 cutover)
+          VITE_WORKER_URL: https://wyrdroom-proxy.gamerdad29.workers.dev
+          # SEC-01 removed VITE_PROXY_SECRET from the frontend entirely.
+          # Access is now gated by strict origin validation + rate
+          # limiting on the worker side.
 
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Pages project name is an internal dashboard label; kept as
+          # 'apoc' during transition. Primary user-facing URL is
+          # https://wyrdroom.com via a custom domain on this project.
           command: pages deploy dist --project-name=apoc
