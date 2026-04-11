@@ -24,10 +24,7 @@ const COLORS: Record<string, AvatarParts> = {
   oracle: { headColor: '#b388ff', headDark: '#7c4dff', bgColor: '#161020', borderColor: '#2a1f40' },
   jinx: { headColor: '#ff6347', headDark: '#cc3322', bgColor: '#1a1014', borderColor: '#351a20' },
   sage: { headColor: '#4dd0e1', headDark: '#2a9aaa', bgColor: '#0d1520', borderColor: '#1a2a38' },
-  flux: { headColor: '#e6a830', headDark: '#b08020', bgColor: '#1a1610', borderColor: '#352a15' },
-  drift: { headColor: '#7eb8da', headDark: '#5090b0', bgColor: '#0d1520', borderColor: '#1a2a3a' },
-  patch: { headColor: '#c0a0d0', headDark: '#9070a0', bgColor: '#181420', borderColor: '#2a2035' },
-  echo: { headColor: '#e08080', headDark: '#b05555', bgColor: '#1a1215', borderColor: '#351a20' },
+  scout: { headColor: '#e07030', headDark: '#a85020', bgColor: '#1a1208', borderColor: '#3a2610' },
   christopher: { headColor: '#55ddaa', headDark: '#33aa77', bgColor: '#0d1418', borderColor: '#1a3030' },
 };
 

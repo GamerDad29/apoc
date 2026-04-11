@@ -14,6 +14,9 @@
  * Adding or removing an agent: update this file AND the matching
  * `src/agents/<id>.ts`, then update `src/agents/index.ts` to export it.
  * The consistency test will fail loudly if you miss a step.
+ *
+ * Roster as of Shipment 2.6 (Agent Overhaul v2): Echo, Flux, Drift, and
+ * Patch were retired; Scout joined. Five agents got model upgrades.
  */
 
 export interface AgentManifestEntry {
@@ -36,72 +39,51 @@ export const agentManifest: AgentManifestEntry[] = [
   {
     id: 'mistral',
     name: 'Mistral',
-    modelId: 'z-ai/glm-4.7-flash',
+    modelId: 'anthropic/claude-haiku-4-5',
     nameColor: '#7b8cde',
-    displayName: 'GLM 4.7 Flash (Mistral)',
+    displayName: 'Claude Haiku 4.5 (Mistral)',
   },
   {
     id: 'scribe',
     name: 'Scribe',
-    modelId: 'nvidia/nemotron-3-nano-30b-a3b:free',
+    modelId: 'openai/gpt-4o-mini',
     nameColor: '#F0C75E',
-    displayName: 'Nemotron 3 Nano (Scribe)',
+    displayName: 'GPT-4o Mini (Scribe)',
   },
   {
     id: 'cipher',
     name: 'Cipher',
-    modelId: 'qwen/qwen3-coder-next',
+    modelId: 'deepseek/deepseek-chat',
     nameColor: '#00ff41',
-    displayName: 'Qwen3 Coder Next (Cipher)',
+    displayName: 'DeepSeek V3.2 (Cipher)',
   },
   {
     id: 'oracle',
     name: 'Oracle',
-    modelId: 'google/gemma-4-26b-a4b-it',
+    modelId: 'google/gemini-3-flash',
     nameColor: '#b388ff',
-    displayName: 'Gemma 4 26B (Oracle)',
+    displayName: 'Gemini 3 Flash (Oracle)',
   },
   {
     id: 'jinx',
     name: 'Jinx',
-    modelId: 'stepfun/step-3.5-flash',
+    modelId: 'google/gemma-4-26b-a4b-it',
     nameColor: '#ff6347',
-    displayName: 'Step 3.5 Flash (Jinx)',
+    displayName: 'Gemma 4 26B A4B (Jinx)',
   },
   {
     id: 'sage',
     name: 'Sage',
-    modelId: 'google/gemma-4-26b-a4b-it',
+    modelId: 'anthropic/claude-haiku-4-5',
     nameColor: '#4dd0e1',
-    displayName: 'Gemma 4 26B (Sage)',
+    displayName: 'Claude Haiku 4.5 (Sage)',
   },
   {
-    id: 'flux',
-    name: 'Flux',
-    modelId: 'xiaomi/mimo-v2-flash',
-    nameColor: '#e6a830',
-    displayName: 'MiMo v2 Flash (Flux)',
-  },
-  {
-    id: 'drift',
-    name: 'Drift',
-    modelId: 'z-ai/glm-4.7-flash',
-    nameColor: '#7eb8da',
-    displayName: 'GLM 4.7 Flash (Drift)',
-  },
-  {
-    id: 'patch',
-    name: 'Patch',
-    modelId: 'google/gemma-4-26b-a4b-it',
-    nameColor: '#c0a0d0',
-    displayName: 'Gemma 4 26B (Patch)',
-  },
-  {
-    id: 'echo',
-    name: 'Echo',
-    modelId: 'stepfun/step-3.5-flash',
-    nameColor: '#e08080',
-    displayName: 'Step 3.5 Flash (Echo)',
+    id: 'scout',
+    name: 'Scout',
+    modelId: 'deepseek/deepseek-reasoner',
+    nameColor: '#e07030',
+    displayName: 'DeepSeek R1 (Scout)',
   },
 ];
 

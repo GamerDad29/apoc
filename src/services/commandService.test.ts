@@ -33,9 +33,9 @@ describe('commandService', () => {
       heyAll: true,
     });
 
-    expect(parseTargetAgent('@echo read the room')).toEqual({
-      agentId: 'echo',
-      cleanText: 'read the room',
+    expect(parseTargetAgent('@scout what just shipped this week')).toEqual({
+      agentId: 'scout',
+      cleanText: 'what just shipped this week',
       heyAll: false,
     });
   });

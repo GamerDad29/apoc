@@ -178,7 +178,9 @@ describe('worker', () => {
   });
 
   describe('/api/models (BUG-05)', () => {
-    it('derives the full 11-agent roster from the shared manifest', async () => {
+    it('derives the full 8-agent roster from the shared manifest', async () => {
+      // Shipment 2.6 (Agent Overhaul v2) trimmed the roster to 8:
+      // Echo, Flux, Drift, and Patch were retired; Scout was added.
       const response = await worker.fetch(
         req('https://worker.example/api/models', {
           method: 'GET',
@@ -194,21 +196,21 @@ describe('worker', () => {
       expect(agentIds).toEqual(
         [
           'cipher',
-          'drift',
-          'echo',
-          'flux',
           'gemma',
           'jinx',
           'mistral',
           'oracle',
-          'patch',
           'sage',
+          'scout',
           'scribe',
         ].sort(),
       );
-      // Drift and Echo were silently missing from the old hardcoded list.
-      expect(agentIds).toContain('drift');
-      expect(agentIds).toContain('echo');
+      // Scout joined; Echo/Flux/Drift/Patch retired.
+      expect(agentIds).toContain('scout');
+      expect(agentIds).not.toContain('echo');
+      expect(agentIds).not.toContain('flux');
+      expect(agentIds).not.toContain('drift');
+      expect(agentIds).not.toContain('patch');
     });
   });
 
