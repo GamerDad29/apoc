@@ -324,21 +324,22 @@ export default function AnimatedAvatar({ agentId, size, expression: externalExpr
       className={className}
       style={{ borderRadius: 2 }}
     >
-      {/* Background */}
-      <rect width={s} height={s} fill="#0d0f14" />
+      {/* Background — warm Wyrdroom dark, matching --bg-deep */}
+      <rect width={s} height={s} fill="#1a1510" />
       <rect x={s * 0.03} y={s * 0.03} width={s * 0.94} height={s * 0.94} fill={c.bgColor} rx={s * 0.03} stroke={c.borderColor} strokeWidth={s * 0.015} />
 
-      {/* Cape (Christopher only) */}
+      {/* Cape (Christopher only) — moss green, Norse forest-ranger vibe,
+          matching --moss / --moss-light from the Mead & Modem palette. */}
       {agentId === 'christopher' && (
         <g className="avatar-cape">
           <path
             d={`M${cx - s * 0.14} ${bodyY + s * 0.02} Q${cx - s * 0.22} ${bodyY + s * 0.2} ${cx - s * 0.18} ${bodyY + bodyH + s * 0.04} L${cx + s * 0.18} ${bodyY + bodyH + s * 0.04} Q${cx + s * 0.22} ${bodyY + s * 0.2} ${cx + s * 0.14} ${bodyY + s * 0.02}`}
-            fill="#3B6BA5"
+            fill="#5a7a3a"
             opacity="0.85"
           />
           <path
             d={`M${cx - s * 0.14} ${bodyY + s * 0.02} Q${cx - s * 0.20} ${bodyY + s * 0.2} ${cx - s * 0.16} ${bodyY + bodyH + s * 0.02} L${cx + s * 0.16} ${bodyY + bodyH + s * 0.02} Q${cx + s * 0.20} ${bodyY + s * 0.2} ${cx + s * 0.14} ${bodyY + s * 0.02}`}
-            fill="#2a4a75"
+            fill="#3d5220"
             opacity="0.5"
           />
         </g>

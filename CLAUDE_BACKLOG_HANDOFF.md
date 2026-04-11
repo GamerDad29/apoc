@@ -108,6 +108,78 @@ commit `1743353`)
   allow-list and tests; worker redeployed; `apoc.pages.dev` now
   returns 403 from the worker
 
+### 🔥 Shipment 2.5 — Vibe Change (Mead & Modem visual rebrand)
+
+Source: `wyrdroom-visual-rebrand.md`
+
+Scope: Pure CSS/visual reskin to finish what Phase 2 started. Phase 2
+changed names, runes, and copy but left the Vault-Tec Fallout palette
+intact — the site still renders in cold navy/steel under Wyrdroom
+branding. This shipment swaps the skin to Mead & Modem (warm wood,
+honey gold, moss green, parchment).
+
+15 concrete changes in `src/styles/chatroom.css`:
+1. Replace the entire `:root` variable block with Mead & Modem palette
+2. Remove CRT scanline `#root::after` overlay
+3. Replace `#root::before` screen glow with hearthfire glow
+4. Titlebar flat warm brown, wider amber text-shadow
+5. Room tabs amber active indicator + hearth-glow hover
+6. Chat messages background: warm brown + wood-grain texture
+7. Code blocks: honey gold on dark instead of terminal green
+8. System message bracket color → gold
+9. Action messages → warmer parchment tone
+10. Avatar border treatment + `image-rendering: pixelated` prep
+11. Input bar warm tones, gold gradient send button (was green)
+12. Sidebar warm background, hearth-glow hover, moss green online dot
+13. Modal warm box-shadow, remove avatar scanline overlay
+14. Typing dot bounce 4px → 3px (gentler, flame-like)
+15. Streaming cursor unchanged (already warm amber)
+
+Layout, components, fonts, animations, responsive breakpoints, and all
+functionality stay identical. Same bones, different clothes.
+
+### 🔥 Shipment 2.6 — Agent Overhaul v2
+
+Source: `wyrdroom-agent-overhaul.md`
+
+Scope: Full roster rebuild + model upgrades + collaboration rules.
+
+**Roster changes (11 → 8 agents):**
+- **Cut:** Echo, Flux, Drift (narrators instead of participants)
+- **Add:** Scout — AI/tech research, trend scouting, DeepSeek R1
+- **Kept:** Gemma, Mistral, Cipher, Oracle, Scribe, Jinx, Sage
+
+**Model upgrades:**
+| Agent | Old → New |
+|---|---|
+| Mistral | GLM 4.7 Flash → `anthropic/claude-haiku-4-5` |
+| Cipher | Qwen3 Coder Next → `deepseek/deepseek-chat` (V3.2) |
+| Oracle | Gemma 4 26B → `google/gemini-3-flash` (1M context) |
+| Scribe | Nemotron 3 Nano → `openai/gpt-4o-mini` |
+| Sage | Gemma 4 26B → `anthropic/claude-haiku-4-5` |
+| Scout | NEW → `deepseek/deepseek-reasoner` (R1) |
+| Gemma | unchanged |
+| Jinx | unchanged (Gemma 4 26B A4B MoE) |
+
+**Prompt rules baked into every remaining agent:**
+- **No roll call** — don't auto-greet when Christopher says "hi all"
+- **No citation chain** — don't open with "[Agent] says X, but..."
+- **Response length targets** — per-agent hard limits (see Part 4)
+- **Specific observations** — when analyzing a URL/doc/code, ground
+  in concrete elements, not abstract commentary
+- **Collaboration model** — you're a team with complementary roles,
+  not independent respondents
+- **Per-agent coordination instructions** — Gemma frames + routes,
+  Mistral speaks after foundation is laid, Sage speaks last or not
+  at all, etc.
+
+**New rune for Scout:** ᚱ (Raidho — journey, travel)
+
+**Worker impact:** The `/api/models` endpoint is derived from the
+shared agent manifest (BUG-05 closed in Shipment 2 Phase 1), so it
+automatically reflects the new roster once `src/agents/manifest.ts`
+is updated. Manifest consistency test will catch any drift.
+
 ### ⏳ Shipment 3 — Usability
 Open: FEAT-01, FEAT-02, FEAT-04, FEAT-05, FEAT-11, VAULT-01
 

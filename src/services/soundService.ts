@@ -259,7 +259,7 @@ export function playIdleChatter(): void {
 }
 
 export function playMentionAlert(): void {
-  // Vault-Tec attention chime: ascending triangle, clear and distinct
+  // Hall-call attention chime: ascending triangle, clear and distinct
   playSequence([
     { freq: 784, dur: 0.12, delay: 0, type: 'triangle', vol: 0.08 },
     { freq: 988, dur: 0.12, delay: 120, type: 'triangle', vol: 0.08 },
