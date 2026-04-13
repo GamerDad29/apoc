@@ -133,36 +133,6 @@ export function playAgentTone(agentId: string): void {
         { freq: 528, dur: 0.3, delay: 200, type: 'sine', vol: 0.04 },
       ]);
       break;
-    case 'flux':
-      // Connecting chime: two notes merging
-      playSequence([
-        { freq: 440, dur: 0.1, delay: 0, type: 'sine', vol: 0.05 },
-        { freq: 660, dur: 0.1, delay: 60, type: 'sine', vol: 0.05 },
-        { freq: 550, dur: 0.15, delay: 130, type: 'sine', vol: 0.06 },
-      ]);
-      break;
-    case 'drift':
-      // Distant horizon: slow rising tone
-      playSequence([
-        { freq: 300, dur: 0.2, delay: 0, type: 'triangle', vol: 0.04 },
-        { freq: 400, dur: 0.2, delay: 150, type: 'triangle', vol: 0.05 },
-        { freq: 500, dur: 0.25, delay: 300, type: 'triangle', vol: 0.04 },
-      ]);
-      break;
-    case 'patch':
-      // Precise click: editorial, clean
-      playSequence([
-        { freq: 800, dur: 0.04, delay: 0, type: 'square', vol: 0.03 },
-        { freq: 1000, dur: 0.06, delay: 60, type: 'square', vol: 0.04 },
-      ]);
-      break;
-    case 'echo':
-      // Soft pulse: empathetic, warm
-      playSequence([
-        { freq: 440, dur: 0.15, delay: 0, type: 'sine', vol: 0.04 },
-        { freq: 440, dur: 0.15, delay: 200, type: 'sine', vol: 0.03 },
-      ]);
-      break;
     default:
       playTone(880, 0.06, 'square', 0.04);
   }
@@ -180,10 +150,7 @@ export function playAgentEnter(agentId: string): void {
     oracle: 370,
     jinx: 587,
     sage: 349,
-    flux: 466,
-    drift: 415,
-    patch: 554,
-    echo: 440,
+    scout: 466,
   };
   const base = baseFreqs[agentId] || 440;
   playSequence([
@@ -203,10 +170,7 @@ export function playAgentLeave(agentId: string): void {
     oracle: 554,
     jinx: 880,
     sage: 523,
-    flux: 698,
-    drift: 622,
-    patch: 830,
-    echo: 660,
+    scout: 698,
   };
   const base = baseFreqs[agentId] || 660;
   playSequence([

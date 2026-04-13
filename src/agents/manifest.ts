@@ -15,8 +15,7 @@
  * `src/agents/<id>.ts`, then update `src/agents/index.ts` to export it.
  * The consistency test will fail loudly if you miss a step.
  *
- * Roster as of Shipment 2.6 (Agent Overhaul v2): Echo, Flux, Drift, and
- * Patch were retired; Scout joined. Five agents got model upgrades.
+ * Keep this list aligned with the current active hall roster.
  */
 
 export interface AgentManifestEntry {

@@ -4,8 +4,6 @@ import { Room } from '../types';
 // persisted message history (keyed on roomId) keeps working.
 // User-facing names use the Norse hall naming.
 //
-// Roster updated in Shipment 2.6 (Agent Overhaul v2): Echo, Flux, Drift,
-// and Patch retired; Scout added.
 export const rooms: Room[] = [
   {
     id: 'main',

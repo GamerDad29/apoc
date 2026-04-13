@@ -5,8 +5,8 @@ import { Message } from '../types';
 function makeMessage(index: number, type: Message['type']): Message {
   return {
     id: `msg-${index}`,
-    senderId: type === 'user' ? 'christopher' : type === 'agent' ? 'echo' : 'system',
-    senderName: type === 'user' ? 'Christopher' : type === 'agent' ? 'Echo' : 'System',
+    senderId: type === 'user' ? 'christopher' : type === 'agent' ? 'oracle' : 'system',
+    senderName: type === 'user' ? 'Christopher' : type === 'agent' ? 'Oracle' : 'System',
     senderColor: '#fff',
     avatarUrl: '',
     content: `${type}-${index}`,
@@ -31,6 +31,6 @@ describe('noteService', () => {
     expect(prompt).not.toContain('system-0');
     expect(prompt).not.toContain('Christopher: user-1\n');
     expect(prompt).toContain('Christopher: user-3');
-    expect(prompt).toContain('Echo: agent-52');
+    expect(prompt).toContain('Oracle: agent-52');
   });
 });

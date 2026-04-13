@@ -80,9 +80,7 @@ function buildBriefContext(roomName: string, brief: SessionBrief): string | unde
   return `Pinned session brief for ${roomName}:\n${lines.join('\n')}\nUse this as the current working context unless Christopher clearly changes direction.`;
 }
 
-// Elder Futhark rune flanking the entry/exit notices for each agent.
-// Roster aligned with Shipment 2.6 (Agent Overhaul v2): Echo, Flux,
-// Drift, and Patch retired; Scout added with Raidho.
+// Elder Futhark rune flanking the entry/exit notices for each active agent.
 const AGENT_RUNES: Record<string, string> = {
   gemma: 'ᚷ',   // Gebo — gift, generosity
   mistral: 'ᛗ', // Mannaz — man, humanity
