@@ -88,7 +88,15 @@ export default function ChatRoom() {
     setSessionBrief,
     togglePinnedMessage,
     captureMessageToScribe,
-  } = useChat(hallSettingsByRoom);
+  } = useChat(
+    hallSettingsByRoom,
+    (roomId, settings) => {
+      setHallSettingsByRoom((prev) => ({
+        ...prev,
+        [roomId]: settings,
+      }));
+    },
+  );
 
   const { getExpression, onMessage, onTyping, onStopTyping } = useExpressions();
 

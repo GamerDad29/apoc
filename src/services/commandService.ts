@@ -3,13 +3,16 @@ import { agents } from '../agents';
 import { setVaultApiKey } from './vaultService';
 
 export interface CommandResult {
-  type: 'system' | 'action' | 'clear' | 'notes' | 'export' | 'vault' | 'mute' | 'unmute' | 'stop' | 'iterate' | 'freeform' | 'save' | 'none';
+  type: 'system' | 'action' | 'clear' | 'notes' | 'export' | 'vault' | 'mute' | 'unmute' | 'stop' | 'iterate' | 'freeform' | 'save' | 'hall' | 'none';
   content: string;
   targetAgent?: string;
   vaultAction?: 'search' | 'read' | 'write' | 'list' | 'save-notes';
   vaultPath?: string;
   iterateTime?: number;
   iterateTopic?: string;
+  hallAction?: 'status' | 'alternate' | 'reactive' | 'cadence';
+  hallBoolean?: boolean;
+  hallCadence?: 'measured' | 'lively';
 }
 
 export function parseCommand(input: string, _userId: string, userName: string): CommandResult | null {
@@ -140,6 +143,67 @@ export function parseCommand(input: string, _userId: string, userName: string): 
     case '/save':
       return { type: 'save', content: 'Compiling notes and saving to Obsidian vault...' };
 
+    case '/hall': {
+      if (!rest) {
+        return {
+          type: 'system',
+          content: [
+            'HALL COMMANDS',
+            '/hall status ................. Show current hall interaction settings',
+            '/hall alternate on|off ....... Toggle left/right alternating transcript',
+            '/hall reactive on|off ........ Toggle stronger agent-to-agent reactions',
+            '/hall cadence measured|lively  Set hall pacing style',
+          ].join('\n'),
+        };
+      }
+
+      const subParts = rest.split(/\s+/);
+      const subCmd = subParts[0]?.toLowerCase();
+      const subArg = subParts[1]?.toLowerCase();
+
+      if (subCmd === 'status') {
+        return { type: 'hall', content: 'Showing hall settings.', hallAction: 'status' };
+      }
+
+      if (subCmd === 'alternate') {
+        if (subArg !== 'on' && subArg !== 'off') {
+          return { type: 'system', content: 'Usage: /hall alternate on|off' };
+        }
+        return {
+          type: 'hall',
+          content: `Alternating transcript ${subArg === 'on' ? 'enabled' : 'disabled'}.`,
+          hallAction: 'alternate',
+          hallBoolean: subArg === 'on',
+        };
+      }
+
+      if (subCmd === 'reactive') {
+        if (subArg !== 'on' && subArg !== 'off') {
+          return { type: 'system', content: 'Usage: /hall reactive on|off' };
+        }
+        return {
+          type: 'hall',
+          content: `Reactive hall mode ${subArg === 'on' ? 'enabled' : 'disabled'}.`,
+          hallAction: 'reactive',
+          hallBoolean: subArg === 'on',
+        };
+      }
+
+      if (subCmd === 'cadence') {
+        if (subArg !== 'measured' && subArg !== 'lively') {
+          return { type: 'system', content: 'Usage: /hall cadence measured|lively' };
+        }
+        return {
+          type: 'hall',
+          content: `Hall cadence set to ${subArg}.`,
+          hallAction: 'cadence',
+          hallCadence: subArg,
+        };
+      }
+
+      return { type: 'system', content: `Unknown hall command: ${subCmd}. Type /hall for help.` };
+    }
+
     case '/help':
       return {
         type: 'system',
@@ -153,6 +217,7 @@ export function parseCommand(input: string, _userId: string, userName: string): 
           '/save .................... Compile notes + push to Obsidian',
           '/iterate <time> <topic> .. Agents discuss topic for duration',
           '/freeform ................ Agents freely talk (stop with /stop)',
+          '/hall .................... Hall interaction controls',
           '/mute .................... Mute emotes and idle chatter',
           '/unmute .................. Resume emotes and idle chatter',
           '/stop .................... Stop all active responses',

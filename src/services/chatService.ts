@@ -12,6 +12,7 @@ function buildChatHistory(
   agent: AgentConfig,
   roomContext?: string,
   idleInstruction?: string,
+  steeringInstruction?: string,
 ): { role: 'system' | 'user' | 'assistant'; content: string }[] {
   const history: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
     { role: 'system', content: agent.systemPrompt },
@@ -34,6 +35,10 @@ function buildChatHistory(
   // Inject idle instruction as a user message so it reaches the model
   if (idleInstruction) {
     history.push({ role: 'user', content: `[Room atmosphere] ${idleInstruction}` });
+  }
+
+  if (steeringInstruction) {
+    history.push({ role: 'user', content: `[Hall direction] ${steeringInstruction}` });
   }
 
   return history;
@@ -80,6 +85,7 @@ export async function sendMessageToAgent(
   onError: (error: string) => void,
   roomContext?: string,
   idleInstruction?: string,
+  steeringInstruction?: string,
   signal?: AbortSignal,
 ): Promise<void> {
   if (!canSpend(agent.id, agent.maxTokensPerResponse)) {
@@ -87,7 +93,7 @@ export async function sendMessageToAgent(
     return;
   }
 
-  const chatHistory = buildChatHistory(messages, agent, roomContext, idleInstruction);
+  const chatHistory = buildChatHistory(messages, agent, roomContext, idleInstruction, steeringInstruction);
 
   const request: ChatCompletionRequest = {
     model: agent.modelId,

@@ -145,7 +145,10 @@ function playEntrySounds(roomId: string): void {
   }
 }
 
-export function useChat(settingsByRoom?: Record<string, HallSettings>) {
+export function useChat(
+  settingsByRoom?: Record<string, HallSettings>,
+  updateHallSettings?: (roomId: string, settings: HallSettings) => void,
+) {
   const [activeRoomId, setActiveRoomId] = useState('main');
   // Track which rooms were freshly seeded (no saved history) so we can play
   // their entry sounds from an effect rather than the state initializer.
@@ -352,6 +355,7 @@ export function useChat(settingsByRoom?: Record<string, HallSettings>) {
       isIdleChat?: boolean;
       idleInstruction?: string;
       autoSaveToVault?: boolean;
+      steeringInstruction?: string;
     },
   ) => {
     if (!agent) return;
@@ -359,6 +363,7 @@ export function useChat(settingsByRoom?: Record<string, HallSettings>) {
     const isIdleChat = options?.isIdleChat;
     const idleInstruction = options?.idleInstruction;
     const autoSaveToVault = options?.autoSaveToVault;
+    const steeringInstruction = options?.steeringInstruction;
     const roomContext = getRoomContext(roomId);
 
     const agentMsgId = generateId();
@@ -501,6 +506,7 @@ export function useChat(settingsByRoom?: Record<string, HallSettings>) {
       },
       roomContext,
       idleInstruction,
+      steeringInstruction,
       controller.signal,
     );
   }, [setRoomMessages, addTypingAgent, removeTypingAgent, getRoomContext]);
@@ -513,6 +519,7 @@ export function useChat(settingsByRoom?: Record<string, HallSettings>) {
     roomId: string,
     isIdleChat?: boolean,
     idleInstruction?: string,
+    steeringInstruction?: string,
   ): Promise<void> => {
     return new Promise((resolve) => {
       if (!agent) { resolve(); return; }
@@ -603,6 +610,7 @@ export function useChat(settingsByRoom?: Record<string, HallSettings>) {
         },
         roomContext,
         idleInstruction,
+        steeringInstruction,
         controller.signal,
       );
     });
@@ -627,11 +635,27 @@ export function useChat(settingsByRoom?: Record<string, HallSettings>) {
     playHeyAll();
     const roomSettings = settingsByRoom?.[roomId];
     const stagger = roomSettings?.conversationCadence === 'lively' ? 420 : 800;
+    const getSteering = (index: number, latestMessages: Message[]) => {
+      if (!roomSettings?.reactiveInterplay || index === 0) return undefined;
+      const recentAgents = latestMessages.filter((message) => message.type === 'agent').slice(-2);
+      const names = recentAgents.map((message) => message.senderName).join(' and ');
+      return names
+        ? `React directly to what ${names} just said. Build on it, challenge it, or twist it forward. Keep Christopher's question central.`
+        : 'React directly to the most recent agent point in the room while still answering Christopher.';
+    };
 
-    sendToAgentPromise(respondingAgents[0], allMessages, roomId).then(() => {
+    sendToAgentPromise(respondingAgents[0], allMessages, roomId, false, undefined, getSteering(0, allMessages)).then(() => {
       for (let i = 1; i < respondingAgents.length; i++) {
         setTimeout(() => {
-          sendToAgentPromise(respondingAgents[i], allMessages, roomId);
+          const latestMessages = messagesByRoomRef.current[roomId] || allMessages;
+          sendToAgentPromise(
+            respondingAgents[i],
+            latestMessages,
+            roomId,
+            false,
+            undefined,
+            getSteering(i, latestMessages),
+          );
         }, i * stagger);
       }
     });
@@ -993,7 +1017,11 @@ export function useChat(settingsByRoom?: Record<string, HallSettings>) {
       );
       turnCount += 1;
 
-      await sendToAgentPromise(agent, latestMessages, activeRoomId, false, instruction);
+      const steering = roomSettings?.reactiveInterplay
+        ? 'Treat the hall like a live conversation. Reference, rebut, or extend another agent when useful, not just the topic.'
+        : undefined;
+
+      await sendToAgentPromise(agent, latestMessages, activeRoomId, false, undefined, `${instruction}${steering ? ` ${steering}` : ''}`);
 
       if (iterationRef.current.active) {
         const lively = roomSettings?.conversationCadence === 'lively';
@@ -1176,6 +1204,42 @@ export function useChat(settingsByRoom?: Record<string, HallSettings>) {
           return;
         }
 
+        if (cmdResult.type === 'hall') {
+          const current = settingsByRoom?.[activeRoomId];
+          if (!current || !updateHallSettings) {
+            addSystemMessage('Hall settings are unavailable right now.');
+            return;
+          }
+
+          if (cmdResult.hallAction === 'status') {
+            addSystemMessage([
+              'HALL SETTINGS',
+              `Alternate transcript: ${current.alternateTranscript ? 'ON' : 'OFF'}`,
+              `Reactive hall mode: ${current.reactiveInterplay ? 'ON' : 'OFF'}`,
+              `Conversation cadence: ${current.conversationCadence.toUpperCase()}`,
+            ].join('\n'));
+            return;
+          }
+
+          if (cmdResult.hallAction === 'alternate') {
+            updateHallSettings(activeRoomId, { ...current, alternateTranscript: Boolean(cmdResult.hallBoolean) });
+            addSystemMessage(cmdResult.content);
+            return;
+          }
+
+          if (cmdResult.hallAction === 'reactive') {
+            updateHallSettings(activeRoomId, { ...current, reactiveInterplay: Boolean(cmdResult.hallBoolean) });
+            addSystemMessage(cmdResult.content);
+            return;
+          }
+
+          if (cmdResult.hallAction === 'cadence' && cmdResult.hallCadence) {
+            updateHallSettings(activeRoomId, { ...current, conversationCadence: cmdResult.hallCadence });
+            addSystemMessage(cmdResult.content);
+            return;
+          }
+        }
+
         if (cmdResult.type === 'save') {
           addSystemMessage(cmdResult.content);
           // Trigger Scribe to compile notes, then auto-push to vault via
@@ -1247,7 +1311,7 @@ export function useChat(settingsByRoom?: Record<string, HallSettings>) {
       // BUG FIX: Unaddressed messages just go to chat. No agent responds.
       // User must @mention an agent or say "hey all" to get a response.
     },
-    [messages, activeRoomId, setRoomMessages, sendToAgent, sendToAll, lastNotes, startDiscussion, stopDiscussion, addSystemMessage],
+    [messages, activeRoomId, setRoomMessages, sendToAgent, sendToAll, lastNotes, startDiscussion, stopDiscussion, addSystemMessage, settingsByRoom, updateHallSettings],
   );
 
   const users = useMemo(() => buildUsers(), [buildUsers]);

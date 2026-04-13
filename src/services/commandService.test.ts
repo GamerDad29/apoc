@@ -26,6 +26,22 @@ describe('commandService', () => {
     });
   });
 
+  it('parses hall interaction commands', () => {
+    expect(parseCommand('/hall alternate on', 'user-1', 'Christopher')).toEqual({
+      type: 'hall',
+      content: 'Alternating transcript enabled.',
+      hallAction: 'alternate',
+      hallBoolean: true,
+    });
+
+    expect(parseCommand('/hall cadence lively', 'user-1', 'Christopher')).toEqual({
+      type: 'hall',
+      content: 'Hall cadence set to lively.',
+      hallAction: 'cadence',
+      hallCadence: 'lively',
+    });
+  });
+
   it('detects hey-all messages and direct agent mentions', () => {
     expect(parseTargetAgent('hey all can someone weigh in')).toEqual({
       agentId: null,
