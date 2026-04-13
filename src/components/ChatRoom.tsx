@@ -17,6 +17,26 @@ import { agentProfiles } from '../agents/profiles';
 import { isSoundEnabled, toggleSound } from '../services/soundService';
 import { DiscussionMode, Message } from '../types';
 
+type SkyMood = 'dawn' | 'day' | 'dusk' | 'night';
+type WeatherMood = 'clear' | 'mist' | 'rain' | 'storm';
+
+function deriveSkyMood(date: Date): SkyMood {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 9) return 'dawn';
+  if (hour >= 9 && hour < 17) return 'day';
+  if (hour >= 17 && hour < 21) return 'dusk';
+  return 'night';
+}
+
+function deriveWeatherMood(date: Date): WeatherMood {
+  const seed = date.getFullYear() * 1000 + date.getMonth() * 100 + date.getDate();
+  const roll = Math.abs(Math.sin(seed) * 10000) % 1;
+  if (roll < 0.18) return 'storm';
+  if (roll < 0.42) return 'rain';
+  if (roll < 0.64) return 'mist';
+  return 'clear';
+}
+
 export default function ChatRoom() {
   const {
     messages,
@@ -53,6 +73,8 @@ export default function ChatRoom() {
   const [discussionTopic, setDiscussionTopic] = useState('');
   const [discussionDuration, setDiscussionDuration] = useState(5);
   const [includeScribeSummary, setIncludeScribeSummary] = useState(true);
+  const [skyMood, setSkyMood] = useState<SkyMood>(() => deriveSkyMood(new Date()));
+  const [weatherMood, setWeatherMood] = useState<WeatherMood>(() => deriveWeatherMood(new Date()));
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const stored = localStorage.getItem('wyrd_sidebar_width');
     return stored ? parseInt(stored, 10) : 220;
@@ -68,6 +90,18 @@ export default function ChatRoom() {
   useEffect(() => {
     setSelectedDiscussionAgents(discussionAgents);
   }, [activeRoomId]);
+
+  useEffect(() => {
+    function refreshAtmosphere() {
+      const now = new Date();
+      setSkyMood(deriveSkyMood(now));
+      setWeatherMood(deriveWeatherMood(now));
+    }
+
+    refreshAtmosphere();
+    const interval = setInterval(refreshAtmosphere, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Search filtering
   const searchMatches = useMemo(() => {
@@ -195,7 +229,7 @@ export default function ChatRoom() {
   }, []);
 
   return (
-    <div className="wyrd-window">
+    <div className="wyrd-window" data-sky={skyMood} data-weather={weatherMood}>
       <div className="wyrd-titlebar">
         <div className="wyrd-titlebar-brand">
           <h1>
