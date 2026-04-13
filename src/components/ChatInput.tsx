@@ -3,19 +3,27 @@ import { useState, useRef } from 'react';
 interface Props {
   onSend: (text: string) => void;
   disabled: boolean;
+  draft?: string;
+  onDraftChange?: (text: string) => void;
 }
 
-export default function ChatInput({ onSend, disabled }: Props) {
-  const [text, setText] = useState('');
+export default function ChatInput({ onSend, disabled, draft, onDraftChange }: Props) {
+  const [internalText, setInternalText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const text = draft ?? internalText;
 
   const isCommand = text.startsWith('/');
+
+  function updateText(next: string) {
+    if (onDraftChange) onDraftChange(next);
+    else setInternalText(next);
+  }
 
   function handleSend() {
     const trimmed = text.trim();
     if (!trimmed || disabled) return;
     onSend(trimmed);
-    setText('');
+    updateText('');
     inputRef.current?.focus();
   }
 
@@ -34,7 +42,7 @@ export default function ChatInput({ onSend, disabled }: Props) {
         type="text"
         placeholder="Type a message... (/help for commands)"
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => updateText(e.target.value)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
         autoFocus

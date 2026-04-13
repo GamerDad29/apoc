@@ -7,6 +7,11 @@ interface Props {
   searchQuery?: string;
   onClickAgent?: (agentId: string) => void;
   expression?: Expression;
+  onTogglePin?: (messageId: string) => void;
+  onSendToScribe?: (messageId: string) => void;
+  onQuote?: (message: Message) => void;
+  availableAgents?: { id: string; name: string }[];
+  onAskAgent?: (message: Message, agentId: string) => void;
 }
 
 function formatTime(timestamp: number): string {
@@ -114,13 +119,24 @@ export function renderMessageContent(text: string, searchQuery?: string): Node[]
   return highlightSearch(tokens, searchQuery || '');
 }
 
-export default function MessageBubble({ message, searchQuery, onClickAgent, expression }: Props) {
+export default function MessageBubble({
+  message,
+  searchQuery,
+  onClickAgent,
+  expression,
+  onTogglePin,
+  onSendToScribe,
+  onQuote,
+  availableAgents = [],
+  onAskAgent,
+}: Props) {
   const isAgent = message.type === 'agent';
   const isUser = message.type === 'user';
   const showAnimatedAvatar = isAgent || isUser;
+  const askTargets = availableAgents.filter((agent) => agent.id !== message.senderId && agent.id !== 'scribe');
 
   return (
-    <div className={`message ${searchQuery ? 'highlighted' : ''}`}>
+    <div className={`message ${searchQuery ? 'highlighted' : ''} ${message.pinned ? 'pinned' : ''}`}>
       {showAnimatedAvatar ? (
         <AnimatedAvatar
           agentId={message.senderId}
@@ -154,6 +170,30 @@ export default function MessageBubble({ message, searchQuery, onClickAgent, expr
         <div className="message-content">
           {renderMessageContent(message.content, searchQuery)}
           {message.isStreaming && <span className="streaming-cursor" />}
+        </div>
+        <div className="message-actions">
+          <button onClick={() => onTogglePin?.(message.id)}>
+            {message.pinned ? 'UNPIN' : 'PIN'}
+          </button>
+          <button onClick={() => onSendToScribe?.(message.id)}>SCRIBE</button>
+          <button onClick={() => onQuote?.(message)}>QUOTE</button>
+          {askTargets.length > 0 && (
+            <select
+              aria-label="Ask another agent to respond"
+              defaultValue=""
+              onChange={(e) => {
+                const agentId = e.target.value;
+                if (!agentId) return;
+                onAskAgent?.(message, agentId);
+                e.currentTarget.value = '';
+              }}
+            >
+              <option value="">ASK AGENT</option>
+              {askTargets.map((agent) => (
+                <option key={agent.id} value={agent.id}>{agent.name}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
     </div>

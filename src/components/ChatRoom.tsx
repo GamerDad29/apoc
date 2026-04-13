@@ -10,19 +10,31 @@ import RoomSelector from './RoomSelector';
 import RoomHeader from './RoomHeader';
 import SearchBar from './SearchBar';
 import AgentProfileModal from './AgentProfileModal';
+import RoomControlPanel from './RoomControlPanel';
+import SessionBriefPanel from './SessionBriefPanel';
+import PinnedMessagesPanel from './PinnedMessagesPanel';
 import { agentProfiles } from '../agents/profiles';
 import { isSoundEnabled, toggleSound } from '../services/soundService';
+import { DiscussionMode, Message } from '../types';
 
 export default function ChatRoom() {
   const {
     messages,
+    pinnedMessages,
     users,
     typingAgent,
     isConnected,
     activeRoomId,
     rooms,
+    sessionBrief,
+    activeDiscussion,
     switchRoom,
     sendMessage,
+    startDiscussion,
+    stopDiscussion,
+    setSessionBrief,
+    togglePinnedMessage,
+    captureMessageToScribe,
   } = useChat();
 
   const { getExpression, onMessage, onTyping, onStopTyping } = useExpressions();
@@ -35,6 +47,11 @@ export default function ChatRoom() {
   const [searchQuery, setSearchQuery] = useState('');
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const [profileAgentId, setProfileAgentId] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
+  const [discussionMode, setDiscussionMode] = useState<DiscussionMode>('round-robin');
+  const [discussionTopic, setDiscussionTopic] = useState('');
+  const [discussionDuration, setDiscussionDuration] = useState(5);
+  const [includeScribeSummary, setIncludeScribeSummary] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const stored = localStorage.getItem('wyrd_sidebar_width');
     return stored ? parseInt(stored, 10) : 220;
@@ -44,6 +61,12 @@ export default function ChatRoom() {
   const isDragging = useRef(false);
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
+  const discussionAgents = (activeRoom?.agents || []).filter((agentId) => agentId !== 'scribe');
+  const [selectedDiscussionAgents, setSelectedDiscussionAgents] = useState<string[]>(discussionAgents);
+
+  useEffect(() => {
+    setSelectedDiscussionAgents(discussionAgents);
+  }, [activeRoomId]);
 
   // Search filtering
   const searchMatches = useMemo(() => {
@@ -109,6 +132,27 @@ export default function ChatRoom() {
     if (agentProfiles[agentId]) {
       setProfileAgentId(agentId);
     }
+  }
+
+  function handleQuoteMessage(message: Message) {
+    setDraft(`> ${message.senderName}: ${message.content}\n\n`);
+  }
+
+  function handleAskAgent(message: Message, agentId: string) {
+    const agent = users.find((user) => user.id === agentId);
+    const label = agent?.name?.toLowerCase() || agentId;
+    setDraft(`@${label} respond to this point from ${message.senderName}: "${message.content}"`);
+  }
+
+  function handleStartDiscussion() {
+    if (!discussionTopic.trim()) return;
+    startDiscussion({
+      mode: discussionMode,
+      topic: discussionTopic.trim(),
+      durationMs: discussionDuration * 60_000,
+      participantIds: selectedDiscussionAgents,
+      includeScribe: includeScribeSummary,
+    });
   }
 
   // Sidebar drag resize. Uses a ref to capture the *current* width on mouse-up
@@ -192,6 +236,47 @@ export default function ChatRoom() {
             />
           )}
 
+          <RoomControlPanel
+            mode={discussionMode}
+            topic={discussionTopic}
+            durationMinutes={discussionDuration}
+            includeScribe={includeScribeSummary}
+            selectedAgents={selectedDiscussionAgents}
+            agentOptions={discussionAgents.map((agentId) => {
+              const user = users.find((candidate) => candidate.id === agentId);
+              return {
+                id: agentId,
+                name: user?.name || agentId,
+                color: user?.nameColor || '#e8dcc8',
+              };
+            })}
+            activeDiscussion={activeDiscussion}
+            onModeChange={setDiscussionMode}
+            onTopicChange={setDiscussionTopic}
+            onDurationChange={setDiscussionDuration}
+            onIncludeScribeChange={setIncludeScribeSummary}
+            onToggleAgent={(agentId) => {
+              setSelectedDiscussionAgents((prev) =>
+                prev.includes(agentId)
+                  ? prev.filter((id) => id !== agentId)
+                  : [...prev, agentId],
+              );
+            }}
+            onStart={handleStartDiscussion}
+            onStop={() => stopDiscussion()}
+          />
+
+          <SessionBriefPanel
+            brief={sessionBrief}
+            onChange={setSessionBrief}
+          />
+
+          <PinnedMessagesPanel
+            messages={pinnedMessages}
+            onUnpin={togglePinnedMessage}
+            onQuote={handleQuoteMessage}
+          />
+
           <div
             className="chat-messages"
             ref={chatRef}
@@ -215,6 +300,14 @@ export default function ChatRoom() {
                   searchQuery={searchMatches.has(msg.id) ? searchQuery : undefined}
                   onClickAgent={handleClickAgent}
                   expression={msg.type === 'agent' ? getExpression(msg.senderId) : undefined}
+                  onTogglePin={togglePinnedMessage}
+                  onSendToScribe={captureMessageToScribe}
+                  onQuote={handleQuoteMessage}
+                  availableAgents={discussionAgents.map((agentId) => {
+                    const agent = users.find((candidate) => candidate.id === agentId);
+                    return { id: agentId, name: agent?.name || agentId };
+                  })}
+                  onAskAgent={handleAskAgent}
                 />
               );
             })}
@@ -224,7 +317,12 @@ export default function ChatRoom() {
             <div ref={messagesEndRef} />
           </div>
 
-          <ChatInput onSend={sendMessage} disabled={!isConnected} />
+          <ChatInput
+            onSend={sendMessage}
+            disabled={!isConnected}
+            draft={draft}
+            onDraftChange={setDraft}
+          />
         </div>
 
         <div className="sidebar-container" style={{ width: sidebarWidth }}>

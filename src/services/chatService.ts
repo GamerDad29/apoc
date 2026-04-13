@@ -2,13 +2,20 @@ import { AgentConfig, Message, ChatCompletionRequest } from '../types';
 import { sendChatRequest } from './proxyService';
 import { canSpend, recordUsage } from './tokenBudget';
 
+function buildRoomContext(roomContext?: string): { role: 'system'; content: string }[] {
+  if (!roomContext) return [];
+  return [{ role: 'system', content: roomContext }];
+}
+
 function buildChatHistory(
   messages: Message[],
   agent: AgentConfig,
+  roomContext?: string,
   idleInstruction?: string,
 ): { role: 'system' | 'user' | 'assistant'; content: string }[] {
   const history: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
     { role: 'system', content: agent.systemPrompt },
+    ...buildRoomContext(roomContext),
   ];
 
   // Include last 30 messages for context
@@ -71,6 +78,7 @@ export async function sendMessageToAgent(
   onChunk: (text: string) => void,
   onDone: () => void,
   onError: (error: string) => void,
+  roomContext?: string,
   idleInstruction?: string,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -79,7 +87,7 @@ export async function sendMessageToAgent(
     return;
   }
 
-  const chatHistory = buildChatHistory(messages, agent, idleInstruction);
+  const chatHistory = buildChatHistory(messages, agent, roomContext, idleInstruction);
 
   const request: ChatCompletionRequest = {
     model: agent.modelId,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Message, UserInfo } from '../types';
+import { ActiveDiscussion, DiscussionConfig, DiscussionMode, Message, SessionBrief, UserInfo } from '../types';
 import { agents, getAgent } from '../agents';
 import { rooms } from '../services/rooms';
 import { sendMessageToAgent } from '../services/chatService';
@@ -28,6 +28,10 @@ function storageKey(roomId: string): string {
   return `wyrd_messages_${roomId}`;
 }
 
+function briefStorageKey(roomId: string): string {
+  return `wyrd_brief_${roomId}`;
+}
+
 function loadMessages(roomId: string): Message[] {
   try {
     const stored = localStorage.getItem(storageKey(roomId));
@@ -41,6 +45,39 @@ function loadMessages(roomId: string): Message[] {
 function saveMessages(roomId: string, messages: Message[]): void {
   const toSave = messages.filter((m) => !m.isStreaming);
   localStorage.setItem(storageKey(roomId), JSON.stringify(toSave));
+}
+
+const EMPTY_BRIEF: SessionBrief = {
+  goal: '',
+  topic: '',
+  constraints: '',
+  output: '',
+};
+
+function loadBrief(roomId: string): SessionBrief {
+  try {
+    const stored = localStorage.getItem(briefStorageKey(roomId));
+    if (!stored) return EMPTY_BRIEF;
+    return { ...EMPTY_BRIEF, ...(JSON.parse(stored) as Partial<SessionBrief>) };
+  } catch {
+    return EMPTY_BRIEF;
+  }
+}
+
+function saveBrief(roomId: string, brief: SessionBrief): void {
+  localStorage.setItem(briefStorageKey(roomId), JSON.stringify(brief));
+}
+
+function buildBriefContext(roomName: string, brief: SessionBrief): string | undefined {
+  const lines = [
+    brief.goal ? `Goal: ${brief.goal}` : '',
+    brief.topic ? `Current topic: ${brief.topic}` : '',
+    brief.constraints ? `Constraints: ${brief.constraints}` : '',
+    brief.output ? `Desired output: ${brief.output}` : '',
+  ].filter(Boolean);
+
+  if (lines.length === 0) return undefined;
+  return `Pinned session brief for ${roomName}:\n${lines.join('\n')}\nUse this as the current working context unless Christopher clearly changes direction.`;
 }
 
 // Elder Futhark rune flanking the entry/exit notices for each agent.
@@ -115,9 +152,17 @@ export function useChat() {
     freshlySeededRoomsRef.current = seeded;
     return initial;
   });
+  const [sessionBriefs, setSessionBriefs] = useState<Record<string, SessionBrief>>(() => {
+    const initial: Record<string, SessionBrief> = {};
+    for (const room of rooms) {
+      initial[room.id] = loadBrief(room.id);
+    }
+    return initial;
+  });
   const [typingAgents, setTypingAgents] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(true);
   const [lastNotes, setLastNotes] = useState<string>('');
+  const [activeDiscussion, setActiveDiscussion] = useState<ActiveDiscussion | null>(null);
   // Active in-flight requests keyed by message id. Each entry owns an
   // AbortController so `/stop` can cancel every active stream at once, and
   // the size of this map is the single source of truth for "is anything
@@ -141,10 +186,16 @@ export function useChat() {
 
   messagesByRoomRef.current = messagesByRoom;
   const messages = messagesByRoom[activeRoomId] || [];
+  const sessionBrief = sessionBriefs[activeRoomId] || EMPTY_BRIEF;
+  const pinnedMessages = messages.filter((m) => m.pinned);
 
   useEffect(() => {
     saveMessages(activeRoomId, messages);
   }, [activeRoomId, messages]);
+
+  useEffect(() => {
+    saveBrief(activeRoomId, sessionBrief);
+  }, [activeRoomId, sessionBrief]);
 
   // Connectivity: run an initial health check and then re-check every 60s.
   // A failed check surfaces as disconnected (the previous fallback of
@@ -190,12 +241,12 @@ export function useChat() {
     }));
   }, []);
 
-  const switchRoom = useCallback((roomId: string) => {
-    if (roomId === activeRoomId) return;
-    setActiveRoomId(roomId);
-    setTypingAgents([]);
-    playRoomSwitch(roomId);
-  }, [activeRoomId]);
+  const updateSessionBrief = useCallback((roomId: string, nextBrief: SessionBrief) => {
+    setSessionBriefs((prev) => ({
+      ...prev,
+      [roomId]: nextBrief,
+    }));
+  }, []);
 
   // Cancel every in-flight agent request. Used by /stop and by room switches
   // where we want to abandon background work cleanly.
@@ -206,6 +257,15 @@ export function useChat() {
     activeRequestsRef.current.clear();
     setTypingAgents([]);
   }, []);
+
+  const switchRoom = useCallback((roomId: string) => {
+    if (roomId === activeRoomId) return;
+    cancelAllRequests();
+    setActiveDiscussion(null);
+    setActiveRoomId(roomId);
+    setTypingAgents([]);
+    playRoomSwitch(roomId);
+  }, [activeRoomId, cancelAllRequests]);
 
   const buildUsers = useCallback((): UserInfo[] => {
     const room = rooms.find((r) => r.id === activeRoomId);
@@ -251,6 +311,12 @@ export function useChat() {
     return [...agentUsers, christopherUser];
   }, [typingAgents, activeRoomId, agentMessageCount]);
 
+  const getRoomContext = useCallback((roomId: string): string | undefined => {
+    const room = rooms.find((candidate) => candidate.id === roomId);
+    if (!room) return undefined;
+    return buildBriefContext(room.name, sessionBriefs[roomId] || EMPTY_BRIEF);
+  }, [sessionBriefs]);
+
   // Send to a single agent and get streaming response.
   //
   // Each call registers an AbortController in activeRequestsRef so that
@@ -276,6 +342,7 @@ export function useChat() {
     const isIdleChat = options?.isIdleChat;
     const idleInstruction = options?.idleInstruction;
     const autoSaveToVault = options?.autoSaveToVault;
+    const roomContext = getRoomContext(roomId);
 
     const agentMsgId = generateId();
     const controller = new AbortController();
@@ -415,10 +482,11 @@ export function useChat() {
           },
         ]);
       },
+      roomContext,
       idleInstruction,
       controller.signal,
     );
-  }, [setRoomMessages, addTypingAgent, removeTypingAgent]);
+  }, [setRoomMessages, addTypingAgent, removeTypingAgent, getRoomContext]);
 
   // Promise-based sendToAgent for chaining (hey all / iterate / freeform).
   // Same AbortController + per-agent typing treatment as sendToAgent.
@@ -434,6 +502,7 @@ export function useChat() {
 
       const agentMsgId = generateId();
       const controller = new AbortController();
+      const roomContext = getRoomContext(roomId);
       activeRequestsRef.current.set(agentMsgId, controller);
       addTypingAgent(agent.name);
 
@@ -515,11 +584,12 @@ export function useChat() {
           ]);
           resolve();
         },
+        roomContext,
         idleInstruction,
         controller.signal,
       );
     });
-  }, [setRoomMessages, addTypingAgent, removeTypingAgent]);
+  }, [setRoomMessages, addTypingAgent, removeTypingAgent, getRoomContext]);
 
   // "Hey all" -- send to multiple agents sequentially
   const sendToAll = useCallback((
@@ -673,6 +743,36 @@ export function useChat() {
     ]);
   }, [activeRoomId, setRoomMessages]);
 
+  const togglePinnedMessage = useCallback((messageId: string) => {
+    setRoomMessages(activeRoomId, (prev) =>
+      prev.map((message) =>
+        message.id === messageId ? { ...message, pinned: !message.pinned } : message,
+      ),
+    );
+  }, [activeRoomId, setRoomMessages]);
+
+  const captureMessageToScribe = useCallback((messageId: string) => {
+    const target = (messagesByRoomRef.current[activeRoomId] || []).find((message) => message.id === messageId);
+    const scribeAgent = getAgent('scribe');
+    if (!target || !scribeAgent) return;
+
+    const capturePrompt = `Capture this specific message into concise working notes. Preserve named people, decisions, risks, and any action implied.\n\nSource message:\n${target.senderName}: ${target.content}`;
+    const promptMessage: Message = {
+      id: generateId(),
+      senderId: USER_ID,
+      senderName: USER_NAME,
+      senderColor: USER_COLOR,
+      avatarUrl: USER_AVATAR,
+      content: capturePrompt,
+      timestamp: Date.now(),
+      type: 'user',
+      roomId: activeRoomId,
+    };
+
+    addSystemMessage(`Scribe is capturing a note from ${target.senderName}.`);
+    sendToAgent(scribeAgent, [...(messagesByRoomRef.current[activeRoomId] || []), promptMessage], activeRoomId);
+  }, [activeRoomId, addSystemMessage, sendToAgent]);
+
   const handleVaultCommand = useCallback(async (
     action: string,
     path?: string,
@@ -744,114 +844,143 @@ export function useChat() {
     }
   }, [addSystemMessage, lastNotes, activeRoomId]);
 
-  // Iteration mode: agents discuss a topic in round-robin for a set time
-  const startIteration = useCallback((topic: string, durationMs: number) => {
-    const room = rooms.find((r) => r.id === activeRoomId);
+  const buildDiscussionInstruction = useCallback((
+    mode: DiscussionMode,
+    topic: string,
+    remainingMinutes: number,
+    latestMessages: Message[],
+    turnCount: number,
+  ) => {
+    const previousSpeakers = latestMessages
+      .slice(-8)
+      .filter((message) => message.type === 'agent')
+      .map((message) => message.senderName);
+    const lastSpeaker = previousSpeakers[previousSpeakers.length - 1] || 'nobody';
+
+    if (mode === 'freeform') {
+      const prompts = [
+        'Introduce yourself briefly. What are you good at? What excites you? 2 sentences max.',
+        'Respond directly to what the last speaker said. Agree, disagree, or build on it. Name them. 2 sentences.',
+        'Ask another specific agent in the room a question about their skills or perspective. 1-2 sentences.',
+        'What is the most interesting thing said so far? Why? Reference the speaker by name. 2 sentences.',
+        'Challenge something someone said respectfully. Offer a counter-perspective. 2 sentences.',
+        'Find a connection between two different things agents have said. Synthesize them. 2 sentences.',
+        'What has NOT been said yet that should be? Fill the gap. 1-2 sentences.',
+        'Compliment another agent on a specific point they made. Then add a twist. 2 sentences.',
+      ];
+      return prompts[Math.min(turnCount, prompts.length - 1)];
+    }
+
+    if (mode === 'brainstorm') {
+      return `BRAINSTORM: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. Add one fresh angle, concrete example, or unexpected option. Do NOT repeat prior ideas. 2-3 sentences max.`;
+    }
+
+    if (mode === 'critique') {
+      return `CRITIQUE: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. Stress-test the idea: name a risk, hidden assumption, or likely failure mode, then offer one corrective move. 2-3 sentences max.`;
+    }
+
+    if (mode === 'synthesis') {
+      return `SYNTHESIS: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. Pull threads together. Name what the room seems to agree on, what still conflicts, and the best next move. 2-3 sentences max.`;
+    }
+
+    return `ROUND ROBIN: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. You MUST reference or build on something specific from the room. Add something new, not a restatement. 2-3 sentences max.`;
+  }, []);
+
+  const stopDiscussion = useCallback((message = 'Discussion stopped.') => {
+    if (iterationRef.current.timer) {
+      clearTimeout(iterationRef.current.timer);
+      iterationRef.current.timer = null;
+    }
+    iterationRef.current.active = false;
+    setActiveDiscussion(null);
+    cancelAllRequests();
+    addSystemMessage(message);
+  }, [addSystemMessage, cancelAllRequests]);
+
+  const startDiscussion = useCallback((config: DiscussionConfig) => {
+    const room = rooms.find((candidate) => candidate.id === activeRoomId);
     if (!room) return;
 
-    const chatAgents = room.agents
-      .filter((id) => id !== 'scribe')
+    const participantIds = config.participantIds.filter((id) => room.agents.includes(id) && id !== 'scribe');
+    const participants = participantIds
       .map((id) => getAgent(id))
       .filter(Boolean) as NonNullable<ReturnType<typeof getAgent>>[];
 
-    if (chatAgents.length < 2) return;
+    if (participants.length < 2) {
+      addSystemMessage('Pick at least two active agents to run a discussion.');
+      return;
+    }
 
+    if (iterationRef.current.timer) {
+      clearTimeout(iterationRef.current.timer);
+      iterationRef.current.timer = null;
+    }
+    cancelAllRequests();
+
+    const startedAt = Date.now();
     iterationRef.current.active = true;
-    const startTime = Date.now();
-    let agentIndex = 0;
+    setActiveDiscussion({ ...config, participantIds, startedAt });
 
-    // End timer
     iterationRef.current.timer = setTimeout(() => {
       iterationRef.current.active = false;
-      setRoomMessages(activeRoomId, (prev) => [
-        ...prev,
-        {
-          id: generateId(),
-          senderId: 'system',
-          senderName: 'System',
-          senderColor: '#5a6878',
-          avatarUrl: '',
-          content: `Iteration complete: "${topic}". Asking Scribe to summarize...`,
-          timestamp: Date.now(),
-          type: 'system',
-          roomId: activeRoomId,
-        },
-      ]);
-      // Trigger Scribe to summarize
-      const scribeAgent = getAgent('scribe');
-      if (scribeAgent) {
-        const latestMsgs = messagesByRoomRef.current[activeRoomId] || [];
-        sendToAgent(scribeAgent, latestMsgs, activeRoomId);
+      iterationRef.current.timer = null;
+      setActiveDiscussion(null);
+
+      if (config.includeScribe) {
+        setRoomMessages(activeRoomId, (prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            senderId: 'system',
+            senderName: 'System',
+            senderColor: '#5a6878',
+            avatarUrl: '',
+            content: `${config.mode} discussion complete: "${config.topic}". Asking Scribe to summarize...`,
+            timestamp: Date.now(),
+            type: 'system',
+            roomId: activeRoomId,
+          },
+        ]);
+        const scribeAgent = getAgent('scribe');
+        if (scribeAgent) {
+          const latestMessages = messagesByRoomRef.current[activeRoomId] || [];
+          sendToAgent(scribeAgent, latestMessages, activeRoomId);
+        }
+      } else {
+        addSystemMessage(`${config.mode} discussion complete: "${config.topic}".`);
       }
-    }, durationMs);
+    }, config.durationMs);
 
-    // Round-robin loop
-    async function nextTurn() {
-      if (!iterationRef.current.active) return;
-      if (Date.now() - startTime >= durationMs) return;
-
-      const agent = chatAgents[agentIndex % chatAgents.length];
-      agentIndex++;
-
-      const latestMsgs = messagesByRoomRef.current[activeRoomId] || [];
-      const remaining = Math.ceil((durationMs - (Date.now() - startTime)) / 60000);
-      const prevSpeakers = latestMsgs.slice(-6).filter(m => m.type === 'agent').map(m => m.senderName);
-      const lastSpeaker = prevSpeakers[prevSpeakers.length - 1] || 'nobody';
-      const instruction = `GROUP DISCUSSION: "${topic}" (${remaining}min left). ${lastSpeaker} just spoke. RULES: You MUST reference or build on something a specific agent said. Do NOT repeat your previous points. Say something NEW. If you already talked about this, take a different angle. 2-3 sentences max.`;
-      await sendToAgentPromise(agent, latestMsgs, activeRoomId, false, instruction);
-
-      // Wait 2-3 seconds then next agent
-      if (iterationRef.current.active) {
-        setTimeout(nextTurn, 2000 + Math.random() * 1000);
-      }
-    }
-
-    nextTurn();
-  }, [activeRoomId, sendToAgentPromise, sendToAgent, setRoomMessages]);
-
-  // Freeform mode: agents freely discuss until /stop
-  const startFreeform = useCallback(() => {
-    const room = rooms.find((r) => r.id === activeRoomId);
-    if (!room) return;
-
-    const chatAgents = room.agents
-      .filter((id) => id !== 'scribe')
-      .map((id) => getAgent(id))
-      .filter(Boolean) as NonNullable<ReturnType<typeof getAgent>>[];
-
-    if (chatAgents.length < 2) return;
-
-    iterationRef.current.active = true;
     let turnCount = 0;
+    let participantIndex = 0;
 
-    const freeformInstructions = [
-      'Introduce yourself briefly. What are you good at? What excites you? 2 sentences max.',
-      'Respond directly to what the last speaker said. Agree, disagree, or build on it. Name them. 2 sentences.',
-      'Ask another specific agent in the room a question about their skills or perspective. 1-2 sentences.',
-      'What is the most interesting thing said so far? Why? Reference the speaker by name. 2 sentences.',
-      'Challenge something someone said (respectfully). Offer a counter-perspective. 2 sentences.',
-      'Find a connection between two different things agents have said. Synthesize them. 2 sentences.',
-      'What has NOT been said yet that should be? Fill the gap. 1-2 sentences.',
-      'Compliment another agent on a specific point they made. Then add a twist. 2 sentences.',
-    ];
-
-    async function nextTurn() {
+    const nextTurn = async () => {
       if (!iterationRef.current.active) return;
+      if (Date.now() - startedAt >= config.durationMs) return;
 
-      const agent = chatAgents[turnCount % chatAgents.length];
-      turnCount++;
+      const agent = participants[participantIndex % participants.length];
+      participantIndex += 1;
+      const latestMessages = messagesByRoomRef.current[activeRoomId] || [];
+      const remainingMinutes = Math.max(1, Math.ceil((config.durationMs - (Date.now() - startedAt)) / 60000));
+      const instruction = buildDiscussionInstruction(
+        config.mode,
+        config.topic,
+        remainingMinutes,
+        latestMessages,
+        turnCount,
+      );
+      turnCount += 1;
 
-      const instruction = freeformInstructions[Math.min(turnCount - 1, freeformInstructions.length - 1)];
-      const latestMsgs = messagesByRoomRef.current[activeRoomId] || [];
-      await sendToAgentPromise(agent, latestMsgs, activeRoomId, false, instruction);
+      await sendToAgentPromise(agent, latestMessages, activeRoomId, false, instruction);
 
       if (iterationRef.current.active) {
-        setTimeout(nextTurn, 2500 + Math.random() * 1500);
+        const pause = config.mode === 'freeform' ? 2500 + Math.random() * 1500 : 1800 + Math.random() * 700;
+        setTimeout(nextTurn, pause);
       }
-    }
+    };
 
     nextTurn();
-  }, [activeRoomId, sendToAgentPromise]);
+  }, [activeRoomId, addSystemMessage, buildDiscussionInstruction, cancelAllRequests, sendToAgent, sendToAgentPromise, setRoomMessages]);
 
   const sendMessage = useCallback(
     (text: string) => {
@@ -994,27 +1123,31 @@ export function useChat() {
         }
 
         if (cmdResult.type === 'stop') {
-          // Cancel active iteration / freeform loops
-          if (iterationRef.current.active) {
-            iterationRef.current.active = false;
-            if (iterationRef.current.timer) clearTimeout(iterationRef.current.timer);
-          }
-          // Actually abort every in-flight fetch so the worker stops
-          // burning tokens. Also clears typing indicators.
-          cancelAllRequests();
-          addSystemMessage(cmdResult.content);
+          stopDiscussion(cmdResult.content);
           return;
         }
 
         if (cmdResult.type === 'iterate') {
+          startDiscussion({
+            mode: 'round-robin',
+            topic: cmdResult.iterateTopic!,
+            durationMs: cmdResult.iterateTime!,
+            participantIds: (rooms.find((room) => room.id === activeRoomId)?.agents || []).filter((id) => id !== 'scribe'),
+            includeScribe: true,
+          });
           addSystemMessage(cmdResult.content);
-          startIteration(cmdResult.iterateTopic!, cmdResult.iterateTime!);
           return;
         }
 
         if (cmdResult.type === 'freeform') {
+          startDiscussion({
+            mode: 'freeform',
+            topic: 'Get to know each other',
+            durationMs: 5 * 60_000,
+            participantIds: (rooms.find((room) => room.id === activeRoomId)?.agents || []).filter((id) => id !== 'scribe'),
+            includeScribe: false,
+          });
           addSystemMessage(cmdResult.content);
-          startFreeform();
           return;
         }
 
@@ -1089,19 +1222,30 @@ export function useChat() {
       // BUG FIX: Unaddressed messages just go to chat. No agent responds.
       // User must @mention an agent or say "hey all" to get a response.
     },
-    [messages, activeRoomId, setRoomMessages, sendToAgent, sendToAll, lastNotes, startIteration, startFreeform, addSystemMessage],
+    [messages, activeRoomId, setRoomMessages, sendToAgent, sendToAll, lastNotes, startDiscussion, stopDiscussion, addSystemMessage],
   );
 
   const users = useMemo(() => buildUsers(), [buildUsers]);
+  const setSessionBrief = useCallback((nextBrief: SessionBrief) => {
+    updateSessionBrief(activeRoomId, nextBrief);
+  }, [activeRoomId, updateSessionBrief]);
 
   return {
     messages,
+    pinnedMessages,
     users,
     typingAgent,
     isConnected,
     activeRoomId,
     rooms,
+    sessionBrief,
+    activeDiscussion,
     switchRoom,
     sendMessage,
+    startDiscussion,
+    stopDiscussion,
+    setSessionBrief,
+    togglePinnedMessage,
+    captureMessageToScribe,
   };
 }

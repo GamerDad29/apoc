@@ -254,6 +254,156 @@ html, body, #root {
   border-color: var(--amber-dim);
 }
 
+.room-control-panel,
+.session-brief-panel,
+.pinned-messages-panel {
+  padding: 10px 14px 12px;
+  border-bottom: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(201, 148, 42, 0.04), transparent 60%),
+    var(--bg-surface);
+}
+
+.panel-kicker {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--amber-dim);
+  margin-bottom: 8px;
+}
+
+.room-control-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.room-control-status {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.room-control-buttons,
+.pinned-message-actions,
+.message-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.room-control-grid,
+.session-brief-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.control-field,
+.control-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.control-field-wide {
+  grid-column: span 2;
+}
+
+.control-toggle {
+  justify-content: flex-end;
+}
+
+.control-toggle input {
+  margin-right: 6px;
+}
+
+.control-field input,
+.control-field select,
+.control-field textarea,
+.message-actions select {
+  width: 100%;
+  padding: 7px 9px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.control-field textarea {
+  resize: vertical;
+  min-height: 56px;
+}
+
+.participant-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.participant-chip,
+.room-control-btn,
+.pinned-message-actions button,
+.message-actions button {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: rgba(26, 21, 16, 0.6);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.participant-chip.selected,
+.room-control-btn.primary {
+  color: var(--amber);
+  border-color: var(--amber-dim);
+  box-shadow: inset 0 0 0 1px rgba(201, 148, 42, 0.15);
+}
+
+.participant-chip:hover,
+.room-control-btn:hover,
+.pinned-message-actions button:hover,
+.message-actions button:hover {
+  color: var(--text-highlight);
+  border-color: var(--amber-dim);
+}
+
+.pinned-messages-list {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.pinned-message-card {
+  min-width: 220px;
+  max-width: 280px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: rgba(30, 23, 16, 0.85);
+}
+
+.pinned-message-meta {
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.pinned-message-content {
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 8px;
+  max-height: 72px;
+  overflow: hidden;
+}
+
 /* SEARCH BAR */
 .search-bar {
   display: flex;
@@ -368,6 +518,11 @@ html, body, #root {
   border-left: 2px solid var(--amber-dim);
 }
 
+.message.pinned {
+  border-left: 2px solid var(--moss-light);
+  padding-left: 10px;
+}
+
 @keyframes message-in {
   from {
     opacity: 0;
@@ -456,6 +611,16 @@ html, body, #root {
   overflow-x: auto;
   color: var(--amber);
   font-size: 13px;
+}
+
+.message-actions {
+  margin-top: 8px;
+  opacity: 0.75;
+}
+
+.message:hover .message-actions,
+.message.pinned .message-actions {
+  opacity: 1;
 }
 
 /* ACTION MESSAGES (/me) */
@@ -985,5 +1150,14 @@ html, body, #root {
     padding: 6px 8px;
     font-size: 10px;
     letter-spacing: 1px;
+  }
+  .room-control-topline,
+  .room-control-grid,
+  .session-brief-grid {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+  .control-field-wide {
+    grid-column: span 1;
   }
 }

@@ -21,6 +21,7 @@ export interface Message {
   timestamp: number;
   type: 'user' | 'agent' | 'system' | 'action';
   isStreaming?: boolean;
+  pinned?: boolean;
   roomId: string;
 }
 
@@ -58,3 +59,24 @@ export interface UserInfo {
 }
 
 export type AgentMood = 'focused' | 'caffeinated' | 'curious' | 'reflective' | 'winding down';
+
+export type DiscussionMode = 'round-robin' | 'brainstorm' | 'critique' | 'synthesis' | 'freeform';
+
+export interface SessionBrief {
+  goal: string;
+  topic: string;
+  constraints: string;
+  output: string;
+}
+
+export interface DiscussionConfig {
+  mode: DiscussionMode;
+  topic: string;
+  durationMs: number;
+  participantIds: string[];
+  includeScribe: boolean;
+}
+
+export interface ActiveDiscussion extends DiscussionConfig {
+  startedAt: number;
+}
