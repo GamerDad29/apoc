@@ -46,6 +46,43 @@ Claude should extend this harness before touching the higher-risk runtime paths.
 
 ## Shipment Status
 
+### ✅ Shipment 3 — Usability (mostly shipped 2026-04-13)
+
+Recent commits on `main`: `d778395`, `5d73073`, `28c7f66`,
+`56b3a3d`, `5e9f913`, `253763e`, `a644551`.
+
+Closed:
+- **FEAT-01** Hall Control panel shipped
+- **FEAT-02** Pinned Session Brief shipped
+- **FEAT-04** Message-level actions shipped
+- **UI-01** Advanced controls moved out of the chat column into a
+  titlebar-triggered modal
+- **UI-02** Message action controls slimmed down from chunky button
+  blocks to low-profile hover actions
+- **UI-03** Dynamic atmosphere pass shipped: time-of-day (`dawn`,
+  `day`, `dusk`, `night`) plus subtle daily weather mood (`clear`,
+  `mist`, `rain`, `storm`)
+- **REBRAND-05** First sprite/style pass shipped as stronger
+  procedural avatar silhouettes with visible gear and Norse costume
+  cues
+- **PROFILE-01** Agent strengths/weaknesses rewritten to read more
+  like party/RPG traits
+- **FEAT-14** Advanced hall settings shipped: alternating transcript
+  layout, reactive hall mode, and cadence (`measured` / `lively`)
+- **CMD-01** `/hall` command family shipped:
+  `/hall status`, `/hall alternate on|off`, `/hall reactive on|off`,
+  `/hall cadence measured|lively`
+- **FEAT-15** Stronger multi-agent interplay shipped through explicit
+  steering instructions in `hey all`, round robin, brainstorm,
+  critique, synthesis, and freeform flows
+- **CLEANUP-01** Retired-agent runtime residue removed (avatars,
+  emotes, sounds, expressions, stale tests/comments)
+
+Still open:
+- **FEAT-05** Mention autocomplete
+- **FEAT-11** Presence upgrades
+- **VAULT-01** Vault hardening
+
 ### ✅ Shipment 1 — Trust the Runtime (shipped 2026-04-10)
 
 Commits on `main`: `82dc2a0`, `bcb90c8`, `a5e50e1`. 19/19 tests passing.
@@ -159,7 +196,7 @@ Closed:
   tests passing
 
 ### ⏳ Shipment 3 — Usability
-Open: FEAT-01, FEAT-02, FEAT-04, FEAT-05, FEAT-11, VAULT-01
+Open: FEAT-05, FEAT-11, VAULT-01
 
 Closed: **POLISH-01** (rune font fallback). Shipped on
 `wyrdroom-rebrand` commit `57aad29`. Noto Sans Runic added to the
@@ -175,7 +212,7 @@ inherently resemble angular Latin letters. Primary value is tofu
 protection on systems without good Runic coverage.
 
 ### ⏳ Shipment 4 — Wyrdroom as a Workflow Tool
-Open: REF-01, FEAT-03, FEAT-06..10, FEAT-12, FEAT-13, REBRAND-05, OPS-02
+Open: REF-01, FEAT-03, FEAT-06..10, FEAT-12, FEAT-13, OPS-02
 
 ---
 

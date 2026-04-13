@@ -3,6 +3,73 @@
 > Historical entries below were written under the APOC brand and are
 > preserved as-is.
 
+## 2026-04-13 — Shipment 3 usability push + atmosphere pass
+
+Substantial product pass focused on making the hall usable as a chat
+first and a control surface second.
+
+### What shipped
+1. **Production bugfix** — stale OpenRouter model IDs fixed and pushed:
+   Oracle now uses `google/gemini-3-flash-preview`, Scout now uses
+   `deepseek/deepseek-r1`. Worker `/api/models` kept in sync.
+   Commits `0bf5bd1`, `d33a218`.
+2. **Shipment 3 core features** — Hall Control, Pinned Brief, and
+   message-level actions shipped. Commit `d778395`.
+3. **Cleanup pass** — removed retired-agent residue from avatars,
+   sound/expression/emote tables, stale tests, and comments.
+   Commit `5d73073`.
+4. **UI control rescue** — hall management panels collapsed by
+   default, then moved into a titlebar-triggered `ADVANCED` modal
+   after live UX review showed the chat was getting buried.
+   Commits `28c7f66`, `56b3a3d`.
+5. **Atmosphere pass** — dynamic time-of-day hall moods plus subtle
+   weather overlays landed. The Mead & Modem look now shifts across
+   `dawn`, `day`, `dusk`, and `night` with `clear`, `mist`, `rain`,
+   or `storm` ambiance. Commit `5e9f913`.
+6. **Avatar/profile pass** — avatars got stronger silhouettes and
+   visible gear (horns, fur, quill, dagger, raven-ward detail, axe
+   hilt, staff, bow/spyglass). Agent profile strengths/weaknesses
+   were rewritten in a more RPG-flavored style. Commit `5e9f913`.
+7. **Advanced hall settings** — per-hall settings surface shipped for
+   alternating transcript layout, reactive hall mode, and measured vs
+   lively cadence. Stored per hall. Commit `253763e`.
+8. **Command + interplay pass** — `/hall` commands shipped and the
+   orchestration layer now uses explicit steering instructions so
+   `hey all` and discussion modes feel more like live back-and-forth
+   instead of isolated monologues. Commit `a644551`.
+
+### Current backlog state
+- ✅ Shipment 3 now has FEAT-01, FEAT-02, FEAT-04 closed
+- ✅ Advanced hall settings and stronger interplay shipped
+- ⏳ Remaining Shipment 3 work: FEAT-05 mention autocomplete,
+  FEAT-11 presence upgrades, VAULT-01 vault hardening
+- ⏳ Shipment 4 still untouched: workflow/refactor/ops track
+
+### Verification
+- `npm test` passing throughout the session, ending at `36/36`
+- `npm run build` passing on every shipped batch
+- multiple pushes to `main`; Pages redeploy path exercised repeatedly
+
+### Commits pushed this session
+```
+a644551  feat(hall): add command controls and stronger interplay
+253763e  feat(interactions): add advanced hall settings
+5e9f913  feat(ui): add dynamic atmosphere and stronger avatar silhouettes
+56b3a3d  fix(ui): move advanced controls to titlebar
+28c7f66  fix(ui): collapse hall management panels by default
+5d73073  chore(cleanup): remove retired agent residue
+d778395  feat(ui): add hall controls briefs and message actions
+d33a218  fix(scout): prevent meta replies on direct messages
+0bf5bd1  fix(agents): refresh stale OpenRouter model IDs
+```
+
+### Notes
+- The old `deepseek-reasoner` production error no longer exists in
+  source. Any future recurrence should be treated as served-bundle
+  cache drift first, not source regression.
+- The next highest-value work is still mention autocomplete, then
+  vault hardening.
+
 ## 2026-04-10 — 🌙 Session close-out (end of day)
 
 Monster session. Going to bed.

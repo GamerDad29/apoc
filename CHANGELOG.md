@@ -3,6 +3,82 @@
 > Historical entries below were written under the APOC brand and are
 > preserved as-is. The project was renamed to Wyrdroom on 2026-04-10.
 
+## 2026-04-13 — Shipment 3 usability + atmosphere + hall controls
+
+This session turned the recent Shipment 3 work into a coherent,
+shipped product pass: usable hall controls, advanced settings,
+dynamic atmosphere, stronger avatars, and better multi-agent
+interplay.
+
+### Shipped
+
+- **Production model fix**
+  - Oracle moved to `google/gemini-3-flash-preview`
+  - Scout moved to `deepseek/deepseek-r1`
+  - Shared manifest and worker `/api/models` kept aligned
+
+- **Shipment 3 core usability**
+  - Hall Control panel
+  - Pinned Brief per hall
+  - Message-level actions: pin, send to Scribe, quote, ask agent
+
+- **UI control restructuring**
+  - Hall management controls no longer consume the transcript column
+  - `ADVANCED` button moved beside `WYRDROOM` in the title bar
+  - Hall controls, brief, pins, and settings now live in a closeable
+    in-site modal
+  - Message action controls slimmed down to lighter hover actions
+
+- **Dynamic atmosphere**
+  - Time-of-day visual states: `dawn`, `day`, `dusk`, `night`
+  - Daily weather mood overlays: `clear`, `mist`, `rain`, `storm`
+  - The Mead & Modem look now feels alive instead of static
+
+- **Avatar + profile pass**
+  - Stronger silhouettes and more visible Norse/RPG gear in
+    `AnimatedAvatar.tsx`
+  - Distinctive cues added across the roster: horns, fur, quill,
+    dagger, raven-ward styling, axe hilt, staff, bow, spyglass
+  - Agent profile strengths/weaknesses rewritten in a more party/RPG
+    style
+
+- **Advanced hall settings**
+  - Per-hall settings surface added
+  - Alternating transcript layout
+  - Reactive hall mode
+  - Conversation cadence: `measured` or `lively`
+  - Settings persist per hall
+
+- **Commands + interplay**
+  - New `/hall` commands:
+    - `/hall status`
+    - `/hall alternate on|off`
+    - `/hall reactive on|off`
+    - `/hall cadence measured|lively`
+  - Discussion and `hey all` flows now use stronger steering so
+    agents react to each other more directly
+
+- **Cleanup**
+  - Removed retired-agent runtime residue from avatars, emotes,
+    sounds, expressions, tests, and stale comments
+
+### Commits
+
+- `0bf5bd1` fix(agents): refresh stale OpenRouter model IDs
+- `d33a218` fix(scout): prevent meta replies on direct messages
+- `d778395` feat(ui): add hall controls briefs and message actions
+- `5d73073` chore(cleanup): remove retired agent residue
+- `28c7f66` fix(ui): collapse hall management panels by default
+- `56b3a3d` fix(ui): move advanced controls to titlebar
+- `5e9f913` feat(ui): add dynamic atmosphere and stronger avatar silhouettes
+- `253763e` feat(interactions): add advanced hall settings
+- `a644551` feat(hall): add command controls and stronger interplay
+
+### Test status
+
+- `npm test`: 36/36 passing
+- `npm run build`: passing
+
 ## 2026-04-10 — 🔥 Shipment 2.6: Agent Overhaul v2
 
 Full roster rebuild, 5 model upgrades, collaboration rules baked into
