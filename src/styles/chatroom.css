@@ -269,7 +269,40 @@ html, body, #root {
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--amber-dim);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 8px;
+}
+
+.panel-summary {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-toggle-btn {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  background: rgba(26, 21, 16, 0.6);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.panel-toggle-btn:hover {
+  color: var(--text-highlight);
+  border-color: var(--amber-dim);
 }
 
 .room-control-topline {
@@ -277,7 +310,7 @@ html, body, #root {
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 0;
 }
 
 .room-control-status {
@@ -293,11 +326,21 @@ html, body, #root {
   flex-wrap: wrap;
 }
 
+.room-control-actions {
+  margin-top: 10px;
+}
+
 .room-control-grid,
 .session-brief-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.room-control-grid,
+.session-brief-grid,
+.pinned-messages-list {
+  margin-top: 10px;
 }
 
 .control-field,
@@ -1152,10 +1195,12 @@ html, body, #root {
     letter-spacing: 1px;
   }
   .room-control-topline,
+  .session-brief-grid {
+    flex-direction: column;
+  }
   .room-control-grid,
   .session-brief-grid {
     grid-template-columns: 1fr;
-    flex-direction: column;
   }
   .control-field-wide {
     grid-column: span 1;
