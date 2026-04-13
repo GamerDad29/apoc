@@ -44,6 +44,7 @@ export default function ChatRoom() {
   const autoScrollRef = useRef(true);
 
   const [showSearch, setShowSearch] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const [profileAgentId, setProfileAgentId] = useState<string | null>(null);
@@ -128,6 +129,10 @@ export default function ChatRoom() {
     setSearchQuery('');
   }
 
+  function handleToggleAdvanced() {
+    setShowAdvanced((current) => !current);
+  }
+
   function handleClickAgent(agentId: string) {
     if (agentProfiles[agentId]) {
       setProfileAgentId(agentId);
@@ -192,10 +197,18 @@ export default function ChatRoom() {
   return (
     <div className="wyrd-window">
       <div className="wyrd-titlebar">
-        <h1>
-          <span className="wyrd-rune" aria-hidden="true">ᚹ</span>
-          WYRDROOM
-        </h1>
+        <div className="wyrd-titlebar-brand">
+          <h1>
+            <span className="wyrd-rune" aria-hidden="true">ᚹ</span>
+            WYRDROOM
+          </h1>
+          <button
+            className={`titlebar-tool-btn ${showAdvanced ? 'active' : ''}`}
+            onClick={handleToggleAdvanced}
+          >
+            {showAdvanced ? 'CLOSE ADVANCED' : 'ADVANCED'}
+          </button>
+        </div>
         <div className="wyrd-titlebar-controls">
           <button
             className={`sound-toggle ${soundOn ? 'active' : ''}`}
@@ -235,47 +248,6 @@ export default function ChatRoom() {
               onClose={handleCloseSearch}
             />
           )}
-
-          <RoomControlPanel
-            mode={discussionMode}
-            topic={discussionTopic}
-            durationMinutes={discussionDuration}
-            includeScribe={includeScribeSummary}
-            selectedAgents={selectedDiscussionAgents}
-            agentOptions={discussionAgents.map((agentId) => {
-              const user = users.find((candidate) => candidate.id === agentId);
-              return {
-                id: agentId,
-                name: user?.name || agentId,
-                color: user?.nameColor || '#e8dcc8',
-              };
-            })}
-            activeDiscussion={activeDiscussion}
-            onModeChange={setDiscussionMode}
-            onTopicChange={setDiscussionTopic}
-            onDurationChange={setDiscussionDuration}
-            onIncludeScribeChange={setIncludeScribeSummary}
-            onToggleAgent={(agentId) => {
-              setSelectedDiscussionAgents((prev) =>
-                prev.includes(agentId)
-                  ? prev.filter((id) => id !== agentId)
-                  : [...prev, agentId],
-              );
-            }}
-            onStart={handleStartDiscussion}
-            onStop={() => stopDiscussion()}
-          />
-
-          <SessionBriefPanel
-            brief={sessionBrief}
-            onChange={setSessionBrief}
-          />
-
-          <PinnedMessagesPanel
-            messages={pinnedMessages}
-            onUnpin={togglePinnedMessage}
-            onQuote={handleQuoteMessage}
-          />
 
           <div
             className="chat-messages"
@@ -340,6 +312,64 @@ export default function ChatRoom() {
           profile={agentProfiles[profileAgentId]}
           onClose={() => setProfileAgentId(null)}
         />
+      )}
+
+      {showAdvanced && (
+        <div className="modal-overlay" onClick={() => setShowAdvanced(false)}>
+          <div
+            className="modal-terminal advanced-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-titlebar">
+              <div className="modal-title">HALL CONTROLS</div>
+              <button className="modal-close" onClick={() => setShowAdvanced(false)}>
+                CLOSE
+              </button>
+            </div>
+            <div className="advanced-modal-body">
+              <RoomControlPanel
+                mode={discussionMode}
+                topic={discussionTopic}
+                durationMinutes={discussionDuration}
+                includeScribe={includeScribeSummary}
+                selectedAgents={selectedDiscussionAgents}
+                agentOptions={discussionAgents.map((agentId) => {
+                  const user = users.find((candidate) => candidate.id === agentId);
+                  return {
+                    id: agentId,
+                    name: user?.name || agentId,
+                    color: user?.nameColor || '#e8dcc8',
+                  };
+                })}
+                activeDiscussion={activeDiscussion}
+                onModeChange={setDiscussionMode}
+                onTopicChange={setDiscussionTopic}
+                onDurationChange={setDiscussionDuration}
+                onIncludeScribeChange={setIncludeScribeSummary}
+                onToggleAgent={(agentId) => {
+                  setSelectedDiscussionAgents((prev) =>
+                    prev.includes(agentId)
+                      ? prev.filter((id) => id !== agentId)
+                      : [...prev, agentId],
+                  );
+                }}
+                onStart={handleStartDiscussion}
+                onStop={() => stopDiscussion()}
+              />
+
+              <SessionBriefPanel
+                brief={sessionBrief}
+                onChange={setSessionBrief}
+              />
+
+              <PinnedMessagesPanel
+                messages={pinnedMessages}
+                onUnpin={togglePinnedMessage}
+                onQuote={handleQuoteMessage}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

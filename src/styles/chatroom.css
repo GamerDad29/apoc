@@ -99,6 +99,12 @@ html, body, #root {
   flex-shrink: 0;
 }
 
+.wyrd-titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .wyrd-titlebar h1 {
   font-size: 14px;
   font-weight: 400;
@@ -125,6 +131,25 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.titlebar-tool-btn {
+  background: rgba(42, 31, 20, 0.8);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.titlebar-tool-btn:hover,
+.titlebar-tool-btn.active {
+  color: var(--amber);
+  border-color: var(--amber-dim);
+  box-shadow: 0 0 10px rgba(201, 148, 42, 0.14);
 }
 
 .sound-toggle {
@@ -238,6 +263,12 @@ html, body, #root {
   font-style: italic;
 }
 
+.room-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .search-toggle {
   background: none;
   border: 1px solid var(--border);
@@ -254,11 +285,17 @@ html, body, #root {
   border-color: var(--amber-dim);
 }
 
+.search-toggle.active {
+  color: var(--amber);
+  border-color: var(--amber-dim);
+  background: rgba(201, 148, 42, 0.08);
+}
+
 .room-control-panel,
 .session-brief-panel,
 .pinned-messages-panel {
   padding: 10px 14px 12px;
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
   background:
     linear-gradient(180deg, rgba(201, 148, 42, 0.04), transparent 60%),
     var(--bg-surface);
@@ -658,12 +695,36 @@ html, body, #root {
 
 .message-actions {
   margin-top: 8px;
-  opacity: 0.75;
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.15s ease;
 }
 
 .message:hover .message-actions,
 .message.pinned .message-actions {
   opacity: 1;
+}
+
+.message-actions button,
+.message-actions select {
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.message-actions button:hover,
+.message-actions select:hover,
+.message-actions button:focus-visible,
+.message-actions select:focus-visible {
+  border-color: var(--border);
+  background: rgba(42, 31, 20, 0.78);
+  color: var(--text-highlight);
 }
 
 /* ACTION MESSAGES (/me) */
@@ -1054,6 +1115,20 @@ html, body, #root {
   overflow-y: auto;
 }
 
+.advanced-modal {
+  width: min(1040px, 92vw);
+  max-height: min(88vh, 920px);
+}
+
+.advanced-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--bg-panel);
+}
+
 .modal-left {
   display: flex;
   flex-direction: column;
@@ -1188,6 +1263,15 @@ html, body, #root {
 @media (max-width: 700px) {
   .user-list {
     display: none;
+  }
+  .room-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .room-header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
   .room-tab {
     padding: 6px 8px;

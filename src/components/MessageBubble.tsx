@@ -172,11 +172,11 @@ export default function MessageBubble({
           {message.isStreaming && <span className="streaming-cursor" />}
         </div>
         <div className="message-actions">
-          <button onClick={() => onTogglePin?.(message.id)}>
-            {message.pinned ? 'UNPIN' : 'PIN'}
+          <button title={message.pinned ? 'Unpin message' : 'Pin message'} onClick={() => onTogglePin?.(message.id)}>
+            {message.pinned ? 'Unpin' : 'Pin'}
           </button>
-          <button onClick={() => onSendToScribe?.(message.id)}>SCRIBE</button>
-          <button onClick={() => onQuote?.(message)}>QUOTE</button>
+          <button title="Send to Scribe" onClick={() => onSendToScribe?.(message.id)}>Scribe</button>
+          <button title="Quote into composer" onClick={() => onQuote?.(message)}>Quote</button>
           {askTargets.length > 0 && (
             <select
               aria-label="Ask another agent to respond"
@@ -188,7 +188,7 @@ export default function MessageBubble({
                 e.currentTarget.value = '';
               }}
             >
-              <option value="">ASK AGENT</option>
+              <option value="">Ask</option>
               {askTargets.map((agent) => (
                 <option key={agent.id} value={agent.id}>{agent.name}</option>
               ))}
